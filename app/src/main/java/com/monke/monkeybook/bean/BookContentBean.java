@@ -4,22 +4,12 @@ package com.monke.monkeybook.bean;
 import android.os.Parcel;
 import android.os.Parcelable;
 
-import org.greenrobot.greendao.annotation.Entity;
-import org.greenrobot.greendao.annotation.Generated;
-import org.greenrobot.greendao.annotation.Id;
-import org.greenrobot.greendao.annotation.Transient;
-
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * 书本缓存内容
  */
-@Entity
-public class BookContentBean implements Parcelable{
+public class BookContentBean implements Parcelable {
     private String noteUrl; //对应BookInfoBean noteUrl;
 
-    @Id
     private String durChapterUrl;
 
     private int durChapterIndex;   //当前章节  （包括番外）
@@ -28,45 +18,16 @@ public class BookContentBean implements Parcelable{
 
     private String tag;   //来源  某个网站/本地
 
-    @Transient
-    private Boolean isRight = true;
-
-    @Transient
-    private List<String> lineContent = new ArrayList<>();
-
-    @Transient
-    private long lineChange;
-
-    public BookContentBean(){
+    public BookContentBean() {
 
     }
 
-    public long getLineChange() {
-        return lineChange;
-    }
-
-    public void setLineChange(long lineChange) {
-        this.lineChange = lineChange;
-    }
-
-    protected BookContentBean(Parcel in) {
+    private BookContentBean(Parcel in) {
         durChapterUrl = in.readString();
         durChapterIndex = in.readInt();
         durChapterContent = in.readString();
         tag = in.readString();
-        lineContent = in.createStringArrayList();
-        isRight = in.readByte()!=0;
         noteUrl = in.readString();
-    }
-
-    @Generated(hash = 41822463)
-    public BookContentBean(String noteUrl, String durChapterUrl, int durChapterIndex,
-            String durChapterContent, String tag) {
-        this.noteUrl = noteUrl;
-        this.durChapterUrl = durChapterUrl;
-        this.durChapterIndex = durChapterIndex;
-        this.durChapterContent = durChapterContent;
-        this.tag = tag;
     }
 
     @Override
@@ -75,8 +36,6 @@ public class BookContentBean implements Parcelable{
         dest.writeInt(durChapterIndex);
         dest.writeString(durChapterContent);
         dest.writeString(tag);
-        dest.writeStringList(lineContent);
-        dest.writeByte((byte) (isRight ? 1 : 0));
         dest.writeString(noteUrl);
     }
 
@@ -85,7 +44,6 @@ public class BookContentBean implements Parcelable{
         return 0;
     }
 
-    @Transient
     public static final Creator<BookContentBean> CREATOR = new Creator<BookContentBean>() {
         @Override
         public BookContentBean createFromParcel(Parcel in) {
@@ -120,8 +78,6 @@ public class BookContentBean implements Parcelable{
 
     public void setDurChapterContent(String durChapterContent) {
         this.durChapterContent = durChapterContent;
-        if(durChapterContent ==null || durChapterContent.length()==0)
-            this.isRight = false;
     }
 
     public String getTag() {
@@ -130,22 +86,6 @@ public class BookContentBean implements Parcelable{
 
     public void setTag(String tag) {
         this.tag = tag;
-    }
-
-    public List<String> getLineContent() {
-        return lineContent;
-    }
-
-    public void setLineContent(List<String> lineContent) {
-        this.lineContent = lineContent;
-    }
-
-    public Boolean getRight() {
-        return isRight;
-    }
-
-    public void setRight(Boolean right) {
-        isRight = right;
     }
 
     public String getNoteUrl() {

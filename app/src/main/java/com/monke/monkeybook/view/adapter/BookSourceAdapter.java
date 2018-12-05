@@ -1,20 +1,20 @@
 package com.monke.monkeybook.view.adapter;
 
-import android.content.Intent;
-import android.graphics.PorterDuff;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
+import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
 import android.widget.ImageView;
 
-import com.monke.monkeybook.BitIntentDataManager;
 import com.monke.monkeybook.R;
 import com.monke.monkeybook.bean.BookSourceBean;
+import com.monke.monkeybook.dao.DbHelper;
+import com.monke.monkeybook.help.BookshelfHelp;
 import com.monke.monkeybook.help.MyItemTouchHelpCallback;
-import com.monke.monkeybook.model.BookSourceManage;
+import com.monke.monkeybook.model.BookSourceManager;
 import com.monke.monkeybook.view.activity.BookSourceActivity;
 import com.monke.monkeybook.view.activity.SourceEditActivity;
 
@@ -32,6 +32,7 @@ public class BookSourceAdapter extends RecyclerView.Adapter<BookSourceAdapter.My
     private List<BookSourceBean> allDataList;
     private BookSourceActivity activity;
     private int index;
+    private int sort;
 
     private MyItemTouchHelpCallback.OnItemTouchCallbackListener itemTouchCallbackListener = new MyItemTouchHelpCallback.OnItemTouchCallbackListener() {
         @Override
@@ -60,6 +61,7 @@ public class BookSourceAdapter extends RecyclerView.Adapter<BookSourceAdapter.My
         notifyDataSetChanged();
         activity.upDateSelectAll();
         activity.upSearchView(dataList.size());
+        activity.upGroupMenu();
     }
 
     private void allDataList(List<BookSourceBean> bookSourceBeanList) {
@@ -86,69 +88,70 @@ public class BookSourceAdapter extends RecyclerView.Adapter<BookSourceAdapter.My
         return itemTouchCallbackListener;
     }
 
+    public void setSort(int sort) {
+        this.sort = sort;
+    }
+
     @NonNull
     @Override
     public MyViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.adapter_book_source_item, parent, false);
+        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_book_source, parent, false);
         return new MyViewHolder(view);
     }
 
     @Override
     public void onBindViewHolder(@NonNull MyViewHolder holder, int position) {
-        holder.cbView.setText(dataList.get(position).getBookSourceName());
+        if (sort != 2) {
+            holder.topView.setVisibility(View.VISIBLE);
+        } else {
+            holder.topView.setVisibility(View.GONE);
+        }
+        if (TextUtils.isEmpty(dataList.get(position).getBookSourceGroup())) {
+            holder.cbView.setText(dataList.get(position).getBookSourceName());
+        } else {
+            holder.cbView.setText(String.format("%s (%s)", dataList.get(position).getBookSourceName(), dataList.get(position).getBookSourceGroup()));
+        }
         holder.cbView.setChecked(dataList.get(position).getEnable());
         holder.cbView.setOnClickListener((View view) -> {
             dataList.get(position).setEnable(holder.cbView.isChecked());
             activity.saveDate(dataList.get(position));
             activity.upDateSelectAll();
         });
-        holder.editView.getDrawable().mutate();
-        holder.editView.getDrawable().setColorFilter(activity.getResources().getColor(R.color.tv_text_default), PorterDuff.Mode.SRC_ATOP);
-        holder.editView.setOnClickListener(view -> {
-            Intent intent = new Intent(activity, SourceEditActivity.class);
-            String key = String.valueOf(System.currentTimeMillis());
-            intent.putExtra("data_key", key);
-            try {
-                BitIntentDataManager.getInstance().putData(key, dataList.get(position).clone());
-            } catch (CloneNotSupportedException e) {
-                BitIntentDataManager.getInstance().putData(key, dataList.get(position));
-                e.printStackTrace();
-            }
-            activity.startActivityForResult(intent, BookSourceActivity.EDIT_SOURCE);
-        });
-        holder.delView.getDrawable().mutate();
-        holder.delView.getDrawable().setColorFilter(activity.getResources().getColor(R.color.tv_text_default), PorterDuff.Mode.SRC_ATOP);
+        holder.editView.setOnClickListener(view -> SourceEditActivity.startThis(activity, dataList.get(position)));
         holder.delView.setOnClickListener(view -> {
             activity.delBookSource(dataList.get(position));
             dataList.remove(position);
+            activity.upSearchView(dataList.size());
             notifyDataSetChanged();
         });
-        holder.topView.getDrawable().mutate();
-        holder.topView.getDrawable().setColorFilter(activity.getResources().getColor(R.color.tv_text_default), PorterDuff.Mode.SRC_ATOP);
         holder.topView.setOnClickListener(view -> {
-            allDataList(BookSourceManage.getAllBookSource());
-
+            allDataList(BookSourceManager.getAllBookSource());
             BookSourceBean moveData = dataList.get(position);
+            if (sort == 0) {
+                moveData.setSerialNumber(0);
+            } else if (sort == 1) {
+                int maxWeight = DbHelper.getInstance().getmDaoSession().getBookSourceBeanDao().queryBuilder()
+                        .orderRaw("-WEIGHT ASC").limit(1).unique().getWeight();
+                moveData.setWeight(maxWeight + 1);
+                BookshelfHelp.saveBookSource(moveData);
+            }
             dataList.remove(position);
+            notifyItemRemoved(position);
+            dataList.add(0, moveData);
             notifyItemInserted(0);
-            dataList.add(0,moveData);
-            notifyItemRemoved(position + 1);
 
-            if (dataList.size() != allDataList.size()){
-                for (int i = 0;i < allDataList.size();i++){
-                    if (moveData.equals(allDataList.get(i))){
+            if (dataList.size() != allDataList.size()) {
+                for (int i = 0; i < allDataList.size(); i++) {
+                    if (moveData.equals(allDataList.get(i))) {
                         index = i;
                         break;
                     }
                 }
                 BookSourceBean moveDataA = allDataList.get(index);
                 allDataList.remove(index);
-                notifyItemInserted(0);
-                allDataList.add(0,moveDataA);
-                notifyItemRemoved(index + 1);
+                allDataList.add(0, moveDataA);
             }
-            notifyDataSetChanged();
-            activity.saveDate(dataList);
+            activity.saveDate(allDataList);
         });
     }
 

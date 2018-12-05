@@ -9,6 +9,8 @@ import org.greenrobot.greendao.annotation.Id;
 import org.greenrobot.greendao.annotation.OrderBy;
 import org.greenrobot.greendao.annotation.Transient;
 
+import java.util.regex.Pattern;
+
 /**
  * Created by GKF on 2018/2/7.
  * 阅读内容替换规则
@@ -23,8 +25,13 @@ public class ReplaceRuleBean implements Parcelable {
     private String regex;
     //替换为
     private String replacement;
+    //作用于
+    private String useTo;
 
     private Boolean enable;
+
+    private Boolean isRegex;
+
     @OrderBy
     private int serialNumber;
 
@@ -33,18 +40,22 @@ public class ReplaceRuleBean implements Parcelable {
         regex = in.readString();
         replacement = in.readString();
         replaceSummary = in.readString();
+        useTo = in.readString();
         enable = in.readByte() != 0;
         serialNumber = in.readInt();
+        isRegex = in.readByte() != 0;
     }
 
-    @Generated(hash = 298152313)
+    @Generated(hash = 1896663649)
     public ReplaceRuleBean(Long id, String replaceSummary, String regex, String replacement,
-            Boolean enable, int serialNumber) {
+            String useTo, Boolean enable, Boolean isRegex, int serialNumber) {
         this.id = id;
         this.replaceSummary = replaceSummary;
         this.regex = regex;
         this.replacement = replacement;
+        this.useTo = useTo;
         this.enable = enable;
+        this.isRegex = isRegex;
         this.serialNumber = serialNumber;
     }
 
@@ -58,8 +69,10 @@ public class ReplaceRuleBean implements Parcelable {
         parcel.writeString(regex);
         parcel.writeString(replacement);
         parcel.writeString(replaceSummary);
+        parcel.writeString(useTo);
         parcel.writeByte((byte) (enable ? 1 : 0));
         parcel.writeInt(serialNumber);
+        parcel.writeByte((byte) (isRegex ? 1 : 0));
     }
 
     @Transient
@@ -90,6 +103,13 @@ public class ReplaceRuleBean implements Parcelable {
 
     public String getRegex() {
         return this.regex;
+    }
+
+    public String getFixedRegex() {
+        if (getIsRegex())
+            return this.regex;
+        else
+            return Pattern.quote(regex);
     }
 
     public void setRegex(String regex) {
@@ -131,4 +151,19 @@ public class ReplaceRuleBean implements Parcelable {
         this.id = id;
     }
 
+    public String getUseTo() {
+        return this.useTo;
+    }
+
+    public void setUseTo(String useTo) {
+        this.useTo = useTo;
+    }
+
+    public Boolean getIsRegex() {
+        return isRegex == null ? true : isRegex;
+    }
+
+    public void setIsRegex(Boolean isRegex) {
+        this.isRegex = isRegex;
+    }
 }

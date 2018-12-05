@@ -15,9 +15,6 @@ import android.widget.LinearLayout;
 
 import com.monke.monkeybook.R;
 
-import java.util.Timer;
-import java.util.TimerTask;
-
 import butterknife.BindView;
 import butterknife.ButterKnife;
 
@@ -33,15 +30,84 @@ public class RefreshRecyclerView extends FrameLayout {
 
     private View noDataView;
     private View refreshErrorView;
-    private boolean isLongClickModule = false;
     private float durTouchX = -1000000;
     private float durTouchY = -1000000;
-    private Timer timer;
     private BaseRefreshListener baseRefreshListener;
+    private OnLoadMoreListener loadMoreListener;
+    private OnTouchListener refreshTouchListener = new OnTouchListener() {
+        @Override
+        public boolean onTouch(View v, MotionEvent event) {
+            int action = event.getAction();
+            switch (action) {
+                case MotionEvent.ACTION_DOWN:
+                    durTouchX = event.getX();
+                    durTouchY = event.getY();
+                    break;
+                case MotionEvent.ACTION_MOVE:
+                    if (durTouchX == -1000000) {
+                        durTouchX = event.getX();
+                    }
+                    if (durTouchY == -1000000)
+                        durTouchY = event.getY();
+                    double deltaX = Math.sqrt((event.getX() - durTouchX) * (event.getX() - durTouchX) + (event.getY() - durTouchY) * (event.getY() - durTouchY));
 
-    public LinearLayout getHeader() {
-        return llHeader;
-    }
+                    float dY = event.getY() - durTouchY;  //>0下拉
+                    durTouchY = event.getY();
+                    if (baseRefreshListener != null && ((RefreshRecyclerViewAdapter) recyclerView.getAdapter()).getIsRequesting() == 0 && rpb.getSecondDurProgress() == rpb.getSecondFinalProgress()) {
+                        if (rpb.getVisibility() != View.VISIBLE) {
+                            rpb.setVisibility(View.VISIBLE);
+                        }
+                        if (recyclerView.getAdapter().getItemCount() > 0) {
+                            if (0 == ((LinearLayoutManager) recyclerView.getLayoutManager()).findFirstCompletelyVisibleItemPosition()) {
+                                rpb.setSecondDurProgress((int) (rpb.getSecondDurProgress() + dY));
+                            }
+                        } else {
+                            rpb.setSecondDurProgress((int) (rpb.getSecondDurProgress() + dY));
+                        }
+                        return rpb.getSecondDurProgress() > 0;
+                    }
+                    break;
+                case MotionEvent.ACTION_UP:
+                    if (baseRefreshListener != null && rpb.getSecondMaxProgress() > 0 && rpb.getSecondDurProgress() > 0) {
+                        if (rpb.getSecondDurProgress() >= rpb.getSecondMaxProgress() && ((RefreshRecyclerViewAdapter) recyclerView.getAdapter()).getIsRequesting() == 0) {
+                            if (baseRefreshListener instanceof OnRefreshWithProgressListener) {
+                                //带有进度的
+                                //执行刷新响应
+                                ((RefreshRecyclerViewAdapter) recyclerView.getAdapter()).setIsAll(false, false);
+                                ((RefreshRecyclerViewAdapter) recyclerView.getAdapter()).setIsRequesting(1, true);
+                                rpb.setMaxProgress(((OnRefreshWithProgressListener) baseRefreshListener).getMaxProgress());
+                                baseRefreshListener.startRefresh();
+                                if (noDataView != null) {
+                                    noDataView.setVisibility(GONE);
+                                }
+                                if (refreshErrorView != null) {
+                                    refreshErrorView.setVisibility(GONE);
+                                }
+                            } else {
+                                //不带进度的
+                                ((RefreshRecyclerViewAdapter) recyclerView.getAdapter()).setIsAll(false, false);
+                                ((RefreshRecyclerViewAdapter) recyclerView.getAdapter()).setIsRequesting(1, true);
+                                baseRefreshListener.startRefresh();
+                                if (noDataView != null) {
+                                    noDataView.setVisibility(GONE);
+                                }
+                                if (refreshErrorView != null) {
+                                    refreshErrorView.setVisibility(GONE);
+                                }
+                                rpb.setIsAutoLoading(true);
+                            }
+                        } else {
+                            if (((RefreshRecyclerViewAdapter) recyclerView.getAdapter()).getIsRequesting() != 1)
+                                rpb.setSecondDurProgressWithAnim(0);
+                        }
+                    }
+                    durTouchX = -1000000;
+                    durTouchY = -1000000;
+                    break;
+            }
+            return false;
+        }
+    };
 
     public RefreshRecyclerView(Context context) {
         this(context, null);
@@ -54,7 +120,7 @@ public class RefreshRecyclerView extends FrameLayout {
     public RefreshRecyclerView(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
 
-        View view = LayoutInflater.from(context).inflate(R.layout.view_refresh_recycler_view, this, false);
+        View view = LayoutInflater.from(context).inflate(R.layout.view_refresh_recycler, this, false);
         ButterKnife.bind(this, view);
 
         @SuppressLint("CustomViewStyleable")
@@ -72,11 +138,13 @@ public class RefreshRecyclerView extends FrameLayout {
         addView(view);
     }
 
+    public LinearLayout getHeader() {
+        return llHeader;
+    }
+
     public void setBaseRefreshListener(BaseRefreshListener baseRefreshListener) {
         this.baseRefreshListener = baseRefreshListener;
     }
-
-    private OnLoadMoreListener loadMoreListener;
 
     public void setLoadMoreListener(OnLoadMoreListener loadMoreListener) {
         this.loadMoreListener = loadMoreListener;
@@ -144,7 +212,7 @@ public class RefreshRecyclerView extends FrameLayout {
     }
 
     public void finishRefresh(Boolean needNoti) {
-        finishRefresh(((RefreshRecyclerViewAdapter) recyclerView.getAdapter()).getItemcount() == 0, needNoti);
+        finishRefresh(((RefreshRecyclerViewAdapter) recyclerView.getAdapter()).getICount() == 0, needNoti);
     }
 
     public void finishRefresh(Boolean isAll, Boolean needNoti) {
@@ -160,10 +228,13 @@ public class RefreshRecyclerView extends FrameLayout {
 
         if (isAll) {
             if (noDataView != null) {
-                if (((RefreshRecyclerViewAdapter) recyclerView.getAdapter()).getItemcount() == 0)
-                    noDataView.setVisibility(VISIBLE);
-                else
-                    noDataView.setVisibility(GONE);
+                recyclerView.post(() -> {
+                    if (((RefreshRecyclerViewAdapter) recyclerView.getAdapter()).getICount() == 0) {
+                        noDataView.setVisibility(VISIBLE);
+                    } else {
+                        noDataView.setVisibility(GONE);
+                    }
+                });
             }
             if (refreshErrorView != null) {
                 refreshErrorView.setVisibility(GONE);
@@ -174,7 +245,7 @@ public class RefreshRecyclerView extends FrameLayout {
     public void finishLoadMore(Boolean isAll, Boolean needNoti) {
         if (isAll) {
             ((RefreshRecyclerViewAdapter) recyclerView.getAdapter()).setIsRequesting(0, false);
-            ((RefreshRecyclerViewAdapter) recyclerView.getAdapter()).setIsAll(isAll, needNoti);
+            ((RefreshRecyclerViewAdapter) recyclerView.getAdapter()).setIsAll(true, needNoti);
         } else {
             ((RefreshRecyclerViewAdapter) recyclerView.getAdapter()).setIsRequesting(0, needNoti);
         }
@@ -196,7 +267,7 @@ public class RefreshRecyclerView extends FrameLayout {
         recyclerView.setAdapter(refreshRecyclerViewAdapter);
     }
 
-    public void setRefreshRecyclerViewAdapter(View headerView ,RefreshRecyclerViewAdapter refreshRecyclerViewAdapter, RecyclerView.LayoutManager layoutManager) {
+    public void setRefreshRecyclerViewAdapter(View headerView, RefreshRecyclerViewAdapter refreshRecyclerViewAdapter, RecyclerView.LayoutManager layoutManager) {
         refreshRecyclerViewAdapter.setClickTryAgainListener(() -> {
             if (loadMoreListener != null)
                 loadMoreListener.loadMoreErrorTryAgain();
@@ -230,98 +301,5 @@ public class RefreshRecyclerView extends FrameLayout {
             refreshErrorView.setVisibility(GONE);
         }
     }
-
-    private void upLongClickTimer() {
-        timer = new Timer();
-        timer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                isLongClickModule = true;
-            }
-        }, 100);
-    }
-
-    private OnTouchListener refreshTouchListener = new OnTouchListener() {
-        @Override
-        public boolean onTouch(View v, MotionEvent event) {
-            int action = event.getAction();
-            switch (action) {
-                case MotionEvent.ACTION_DOWN:
-                    durTouchX = event.getX();
-                    durTouchY = event.getY();
-                    upLongClickTimer();
-                    break;
-                case MotionEvent.ACTION_MOVE:
-                    if (durTouchX == -1000000) {
-                        durTouchX = event.getX();
-                        upLongClickTimer();
-                    }
-                    if (durTouchY == -1000000)
-                        durTouchY = event.getY();
-                    double deltaX = Math.sqrt((event.getX() - durTouchX) * (event.getX() - durTouchX) + (event.getY() - durTouchY) * (event.getY() - durTouchY));
-                    if (deltaX > 10 && timer != null) { // 移动大于10像素
-                        timer.cancel();
-                        timer = null;
-                    }
-                    if (!isLongClickModule) {
-                        float dY = event.getY() - durTouchY;  //>0下拉
-                        durTouchY = event.getY();
-                        if (baseRefreshListener != null && ((RefreshRecyclerViewAdapter) recyclerView.getAdapter()).getIsRequesting() == 0 && rpb.getSecondDurProgress() == rpb.getSecondFinalProgress()) {
-                            if (rpb.getVisibility() != View.VISIBLE) {
-                                rpb.setVisibility(View.VISIBLE);
-                            }
-                            if (recyclerView.getAdapter().getItemCount() > 0) {
-                                if (0 == ((LinearLayoutManager) recyclerView.getLayoutManager()).findFirstCompletelyVisibleItemPosition()) {
-                                    rpb.setSecondDurProgress((int) (rpb.getSecondDurProgress() + dY));
-                                }
-                            } else {
-                                rpb.setSecondDurProgress((int) (rpb.getSecondDurProgress() + dY));
-                            }
-                            return rpb.getSecondDurProgress() > 0;
-                        }
-                    }
-                    break;
-                case MotionEvent.ACTION_UP:
-                    if (!isLongClickModule && baseRefreshListener != null && rpb.getSecondMaxProgress() > 0 && rpb.getSecondDurProgress() > 0) {
-                        if (rpb.getSecondDurProgress() >= rpb.getSecondMaxProgress() && ((RefreshRecyclerViewAdapter) recyclerView.getAdapter()).getIsRequesting() == 0) {
-                            if (baseRefreshListener instanceof OnRefreshWithProgressListener) {
-                                //带有进度的
-                                //执行刷新响应
-                                ((RefreshRecyclerViewAdapter) recyclerView.getAdapter()).setIsAll(false, false);
-                                ((RefreshRecyclerViewAdapter) recyclerView.getAdapter()).setIsRequesting(1, true);
-                                rpb.setMaxProgress(((OnRefreshWithProgressListener) baseRefreshListener).getMaxProgress());
-                                baseRefreshListener.startRefresh();
-                                if (noDataView != null) {
-                                    noDataView.setVisibility(GONE);
-                                }
-                                if (refreshErrorView != null) {
-                                    refreshErrorView.setVisibility(GONE);
-                                }
-                            } else {
-                                //不带进度的
-                                ((RefreshRecyclerViewAdapter) recyclerView.getAdapter()).setIsAll(false, false);
-                                ((RefreshRecyclerViewAdapter) recyclerView.getAdapter()).setIsRequesting(1, true);
-                                baseRefreshListener.startRefresh();
-                                if (noDataView != null) {
-                                    noDataView.setVisibility(GONE);
-                                }
-                                if (refreshErrorView != null) {
-                                    refreshErrorView.setVisibility(GONE);
-                                }
-                                rpb.setIsAutoLoading(true);
-                            }
-                        } else {
-                            if (((RefreshRecyclerViewAdapter) recyclerView.getAdapter()).getIsRequesting() != 1)
-                                rpb.setSecondDurProgressWithAnim(0);
-                        }
-                    }
-                    isLongClickModule = false;
-                    durTouchX = -1000000;
-                    durTouchY = -1000000;
-                    break;
-            }
-            return false;
-        }
-    };
 
 }

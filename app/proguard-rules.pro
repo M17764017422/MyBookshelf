@@ -189,10 +189,16 @@ public static java.lang.String TABLENAME;
 -keep class freemarker.**{*;}
 -keep class com.gyf.barlibrary.* {*;}
 ##JSOUP
--keep class org.jsoup.**{ *; }
--keep class com.monke.mprogressbar.**{ *; }
+-keep class org.jsoup.**{ *;}
+-keep class com.monke.mprogressbar.**{ *;}
 
-##友盟统计
+###EPUB
+-dontwarn nl.siegmann.epublib.**
+-dontwarn org.xmlpull.v1.**
+-keep class nl.siegmann.epublib.**{*;}
+-keep class javax.xml.**{*;}
+-keep class org.xmlpull.**{*;}
+
 -keepclassmembers class * {
     public <init> (org.json.JSONObject);
 }
@@ -203,8 +209,3 @@ public static java.lang.String TABLENAME;
     public static **[] values();
     public static ** valueOf(java.lang.String);
 }
-
-##百度自动更新
--keep class com.baidu.**{*;}
-
--keep class br.tiagohm.markdownview.**{*;}

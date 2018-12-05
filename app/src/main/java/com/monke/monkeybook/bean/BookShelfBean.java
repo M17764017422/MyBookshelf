@@ -4,8 +4,6 @@ package com.monke.monkeybook.bean;
 import android.os.Parcel;
 import android.os.Parcelable;
 
-import com.monke.monkeybook.widget.contentview.BookContentView;
-
 import org.greenrobot.greendao.annotation.Entity;
 import org.greenrobot.greendao.annotation.Generated;
 import org.greenrobot.greendao.annotation.Id;
@@ -18,7 +16,7 @@ import java.util.List;
  */
 
 @Entity
-public class BookShelfBean implements Parcelable,Cloneable{
+public class BookShelfBean implements Parcelable, Cloneable {
     @Transient
     public static final String LOCAL_TAG = "loc_book";
     @Transient
@@ -29,7 +27,7 @@ public class BookShelfBean implements Parcelable,Cloneable{
     @Id
     private String noteUrl; //对应BookInfoBean noteUrl;
     private Integer durChapter = 0;   //当前章节 （包括番外）
-    private Integer durChapterPage = BookContentView.DurPageIndexBegin;  // 当前章节位置   用页码
+    private Integer durChapterPage = 0;  // 当前章节位置   用页码
     private Long finalDate = System.currentTimeMillis();  //最后阅读时间
     private Boolean hasUpdate = false;  //是否有更新
     private Integer newChapters = 0;  //更新章节数
@@ -37,12 +35,17 @@ public class BookShelfBean implements Parcelable,Cloneable{
     private Integer serialNumber = 0; //手动排序
     private Long finalRefreshData = System.currentTimeMillis();  //章节最后更新时间
     private Integer group = 0;
-    private Boolean isScroll = false;
+    private String durChapterName;
+    private String lastChapterName;
+    private Integer chapterListSize = 0;
+    private String customCoverPath;
+    private Boolean allowUpdate = true;
+    private Boolean useReplaceRule = true;
 
     @Transient
     private BookInfoBean bookInfoBean = new BookInfoBean();
 
-    public BookShelfBean(){
+    public BookShelfBean() {
 
     }
 
@@ -69,13 +72,19 @@ public class BookShelfBean implements Parcelable,Cloneable{
         serialNumber = in.readInt();
         finalRefreshData = in.readLong();
         group = in.readInt();
-        isScroll = in.readByte() != 0;
+        durChapterName = in.readString();
+        lastChapterName = in.readString();
+        chapterListSize = in.readInt();
+        customCoverPath = in.readString();
+        allowUpdate = in.readByte() != 0 && !tag.equals(LOCAL_TAG);
+        useReplaceRule = in.readByte() != 0;
     }
 
-    @Generated(hash = 1672419505)
-    public BookShelfBean(String noteUrl, Integer durChapter, Integer durChapterPage,
-            Long finalDate, Boolean hasUpdate, Integer newChapters, String tag,
-            Integer serialNumber, Long finalRefreshData, Integer group, Boolean isScroll) {
+    @Generated(hash = 2111310267)
+    public BookShelfBean(String noteUrl, Integer durChapter, Integer durChapterPage, Long finalDate,
+                         Boolean hasUpdate, Integer newChapters, String tag, Integer serialNumber, Long finalRefreshData,
+                         Integer group, String durChapterName, String lastChapterName, Integer chapterListSize,
+                         String customCoverPath, Boolean allowUpdate, Boolean useReplaceRule) {
         this.noteUrl = noteUrl;
         this.durChapter = durChapter;
         this.durChapterPage = durChapterPage;
@@ -86,7 +95,12 @@ public class BookShelfBean implements Parcelable,Cloneable{
         this.serialNumber = serialNumber;
         this.finalRefreshData = finalRefreshData;
         this.group = group;
-        this.isScroll = isScroll;
+        this.durChapterName = durChapterName;
+        this.lastChapterName = lastChapterName;
+        this.chapterListSize = chapterListSize;
+        this.customCoverPath = customCoverPath;
+        this.allowUpdate = allowUpdate;
+        this.useReplaceRule = useReplaceRule;
     }
 
     @Override
@@ -100,7 +114,12 @@ public class BookShelfBean implements Parcelable,Cloneable{
         dest.writeParcelable(bookInfoBean, flags);
         dest.writeInt(serialNumber);
         dest.writeLong(finalRefreshData);
-        dest.writeByte((byte) (isScroll ? 1 : 0));
+        dest.writeString(durChapterName);
+        dest.writeString(lastChapterName);
+        dest.writeInt(chapterListSize);
+        dest.writeString(customCoverPath);
+        dest.writeByte((byte) (allowUpdate ? 1 : 0));
+        dest.writeByte((byte) (useReplaceRule ? 1 : 0));
     }
 
     @Override
@@ -117,6 +136,31 @@ public class BookShelfBean implements Parcelable,Cloneable{
         return bookShelfBean;
     }
 
+
+    public ChapterListBean getChapter(int index) {
+        if (realChapterListEmpty() || index < 0) {
+            ChapterListBean chapterListBean = new ChapterListBean();
+            chapterListBean.setDurChapterName("暂无");
+            chapterListBean.setDurChapterUrl("暂无");
+            return chapterListBean;
+        } else if (index < getChapterList().size()) {
+            return getChapterList().get(index);
+        } else {
+            durChapter = getChapterList().size() - 1;
+            return getChapterList().get(durChapter);
+        }
+    }
+
+    public BookmarkBean getBookmark(int index) {
+        if (realBookmarkListEmpty() || index < 0) {
+            return null;
+        } else if (index < getBookmarkList().size()) {
+            return getBookmarkList().get(index);
+        } else {
+            return getBookmarkList().get(getChapterList().size() - 1);
+        }
+    }
+
     public String getNoteUrl() {
         return noteUrl;
     }
@@ -126,35 +170,21 @@ public class BookShelfBean implements Parcelable,Cloneable{
     }
 
     public int getDurChapter() {
-        return durChapter;
-    }
-
-    public void setDurChapter(int durChapter) {
-        this.durChapter = durChapter;
-    }
-
-    //获取当前章节
-    public ChapterListBean getDurChapterListBean() {
-        return getChapterList(durChapter);
-    }
-
-    //获取最新章节
-    public ChapterListBean getLastChapterListBean() {
-        return getChapterList(bookInfoBean.getChapterList().size() - 1);
+        return durChapter < 0 ? 0 : durChapter;
     }
 
     public ChapterListBean getChapterList(int index) {
 
-        if (getChapterList() == null || getChapterListSize() == 0 || index < 0) {
+        if (getChapterList() == null || getChapterList().size() == 0 || index < 0) {
             ChapterListBean chapterListBean = new ChapterListBean();
             chapterListBean.setDurChapterName("暂无");
             chapterListBean.setDurChapterUrl("暂无");
             return chapterListBean;
-        } else if (index < getChapterListSize()) {
+        } else if (index < getChapterList().size()) {
             return getChapterList().get(index);
         } else {
-            durChapter = getChapterListSize() - 1;
-            return getChapterList().get(getChapterListSize() - 1);
+            durChapter = getChapterList().size() - 1;
+            return getChapterList().get(getChapterList().size() - 1);
         }
     }
 
@@ -162,12 +192,8 @@ public class BookShelfBean implements Parcelable,Cloneable{
         return getBookInfoBean().getChapterList();
     }
 
-    public int getChapterListSize() {
-        return getChapterList().size();
-    }
-
     public int getDurChapterPage() {
-        return durChapterPage;
+        return durChapterPage < 0 ? 0 : durChapterPage;
     }
 
     public long getFinalDate() {
@@ -226,14 +252,6 @@ public class BookShelfBean implements Parcelable,Cloneable{
         return this.group == null ? 0 : this.group;
     }
 
-    public Boolean getIsScroll() {
-        return this.isScroll;
-    }
-
-    public void setIsScroll(Boolean isScroll) {
-        this.isScroll = isScroll;
-    }
-
     public void setDurChapter(Integer durChapter) {
         this.durChapter = durChapter;
     }
@@ -265,4 +283,94 @@ public class BookShelfBean implements Parcelable,Cloneable{
     public void setGroup(Integer group) {
         this.group = group;
     }
+
+    public String getDurChapterName() {
+        return this.durChapterName;
+    }
+
+    public void setDurChapterName(String durChapterName) {
+        this.durChapterName = durChapterName;
+    }
+
+    public void upDurChapterName() {
+        if (getChapterList().size() > durChapter) {
+            durChapterName = getChapterList().get(durChapter).getDurChapterName();
+        }
+    }
+
+    public String getLastChapterName() {
+        return this.lastChapterName;
+    }
+
+    public void setLastChapterName(String lastChapterName) {
+        this.lastChapterName = lastChapterName;
+    }
+
+    public void upLastChapterName() {
+        if (getChapterList().size() > 0) {
+            lastChapterName = getChapterList().get(getChapterListSize() - 1).getDurChapterName();
+        }
+    }
+
+    public int getUnreadChapterNum() {
+        int num = getChapterListSize() - getDurChapter() - 1;
+        return num < 0 ? 0 : num;
+    }
+
+    public int getChapterListSize() {
+        if (getChapterList().size() == 0) {
+            return this.chapterListSize == null ? 0 : this.chapterListSize;
+        }
+        return getChapterList().size();
+    }
+
+    public void setChapterListSize(Integer chapterListSize) {
+        this.chapterListSize = chapterListSize;
+    }
+
+    public String getCustomCoverPath() {
+        return this.customCoverPath;
+    }
+
+    public void setCustomCoverPath(String customCoverPath) {
+        this.customCoverPath = customCoverPath;
+    }
+
+    public Boolean getAllowUpdate() {
+        return allowUpdate == null ? true : allowUpdate;
+    }
+
+    public void setAllowUpdate(Boolean allowUpdate) {
+        this.allowUpdate = allowUpdate;
+    }
+
+    public boolean realChapterListEmpty() {
+        return getChapterList().isEmpty();
+    }
+
+    public void setChapterList(List<ChapterListBean> chapterList) {
+        this.bookInfoBean.setChapterList(chapterList);
+    }
+
+    public boolean realBookmarkListEmpty() {
+        return getBookmarkList().isEmpty();
+    }
+
+    public List<BookmarkBean> getBookmarkList() {
+        return this.bookInfoBean.getBookmarkList();
+    }
+
+    public int getBookmarkListSize() {
+        return getBookmarkList().size();
+    }
+
+    public Boolean getUseReplaceRule() {
+        return this.useReplaceRule;
+    }
+
+    public void setUseReplaceRule(Boolean useReplaceRule) {
+        this.useReplaceRule = useReplaceRule;
+    }
+
+
 }

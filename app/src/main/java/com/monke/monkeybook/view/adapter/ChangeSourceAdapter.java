@@ -1,7 +1,6 @@
 package com.monke.monkeybook.view.adapter;
 
 import android.content.Context;
-import android.graphics.PorterDuff;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -12,6 +11,7 @@ import android.widget.TextView;
 
 import com.monke.monkeybook.R;
 import com.monke.monkeybook.bean.SearchBookBean;
+import com.monke.monkeybook.view.adapter.base.BaseListAdapter;
 import com.monke.monkeybook.widget.refreshview.RefreshRecyclerViewAdapter;
 
 import java.util.ArrayList;
@@ -26,7 +26,8 @@ import static android.text.TextUtils.isEmpty;
 
 public class ChangeSourceAdapter extends RefreshRecyclerViewAdapter {
     private List<SearchBookBean> searchBookBeans;
-    private OnItemClickListener mOnItemClickListener;
+    private BaseListAdapter.OnItemClickListener onItemClickListener;
+    private BaseListAdapter.OnItemLongClickListener onItemLongClickListener;
     private Context mContext;
 
     public ChangeSourceAdapter(Context context, Boolean needLoadMore) {
@@ -47,22 +48,65 @@ public class ChangeSourceAdapter extends RefreshRecyclerViewAdapter {
 
     public void reSetSourceAdapter() {
         searchBookBeans.clear();
-        notifyDataSetChanged();
+            notifyDataSetChanged();
     }
 
-    public interface OnItemClickListener {
-        void onItemClick(View view, int index);
+    public void setOnItemClickListener(BaseListAdapter.OnItemClickListener listener) {
+        this.onItemClickListener = listener;
     }
 
-    public void setOnItemClickListener(OnItemClickListener listener) {
-        this.mOnItemClickListener = listener;
+    public void setOnItemLongClickListener(BaseListAdapter.OnItemLongClickListener itemLongClickListener) {
+        this.onItemLongClickListener = itemLongClickListener;
     }
 
     public List<SearchBookBean> getSearchBookBeans() {
         return searchBookBeans;
     }
 
-    class MyViewHolder extends RecyclerView.ViewHolder{
+    @Override
+    public RecyclerView.ViewHolder onCreateIViewHolder(ViewGroup parent, int viewType) {
+        return new MyViewHolder(LayoutInflater.from(parent.getContext()).inflate(R.layout.item_change_source, parent, false));
+    }
+
+    @Override
+    public void onBindIViewHolder(RecyclerView.ViewHolder holder, int position) {
+        holder.itemView.setTag(position);
+        MyViewHolder myViewHolder = (MyViewHolder) holder;
+        myViewHolder.tvBookSource.setText(searchBookBeans.get(position).getOrigin());
+        if (isEmpty(searchBookBeans.get(position).getLastChapter())) {
+            myViewHolder.tvLastChapter.setText(R.string.no_last_chapter);
+        } else {
+            myViewHolder.tvLastChapter.setText(searchBookBeans.get(position).getLastChapter());
+        }
+        if (searchBookBeans.get(position).getIsCurrentSource()) {
+            myViewHolder.ivChecked.setVisibility(View.VISIBLE);
+        } else {
+            myViewHolder.ivChecked.setVisibility(View.INVISIBLE);
+        }
+        myViewHolder.llContent.setOnClickListener(view -> {
+            if (onItemClickListener != null) {
+                onItemClickListener.onItemClick(view, position);
+            }
+        });
+        myViewHolder.llContent.setOnLongClickListener(view -> {
+            if (onItemLongClickListener != null) {
+                return onItemLongClickListener.onItemLongClick(view, position);
+            }
+            return true;
+        });
+    }
+
+    @Override
+    public int getIViewType(int position) {
+        return 0;
+    }
+
+    @Override
+    public int getICount() {
+        return searchBookBeans.size();
+    }
+
+    class MyViewHolder extends RecyclerView.ViewHolder {
         LinearLayout llContent;
         TextView tvBookSource;
         TextView tvLastChapter;
@@ -75,44 +119,5 @@ public class ChangeSourceAdapter extends RefreshRecyclerViewAdapter {
             tvLastChapter = itemView.findViewById(R.id.tv_lastChapter);
             ivChecked = itemView.findViewById(R.id.iv_checked);
         }
-    }
-
-    @Override
-    public RecyclerView.ViewHolder onCreateViewholder(ViewGroup parent, int viewType) {
-        return new MyViewHolder(LayoutInflater.from(parent.getContext()).inflate(R.layout.adapter_change_source_item, parent, false));
-    }
-
-    @Override
-    public void onBindViewholder(RecyclerView.ViewHolder holder, int position) {
-        holder.itemView.setTag(position);
-        MyViewHolder myViewHolder = (MyViewHolder) holder;
-        myViewHolder.tvBookSource.setText(searchBookBeans.get(position).getOrigin());
-        if (isEmpty(searchBookBeans.get(position).getLastChapter())) {
-            myViewHolder.tvLastChapter.setText(R.string.no_last_chapter);
-        } else {
-            myViewHolder.tvLastChapter.setText(searchBookBeans.get(position).getLastChapter());
-        }
-        myViewHolder.ivChecked.getDrawable().mutate();
-        myViewHolder.ivChecked.setColorFilter(mContext.getResources().getColor(R.color.tv_text_default), PorterDuff.Mode.SRC_ATOP);
-        if (searchBookBeans.get(position).getIsAdd()) {
-            myViewHolder.ivChecked.setVisibility(View.VISIBLE);
-        } else {
-            myViewHolder.ivChecked.setVisibility(View.INVISIBLE);
-        }
-        myViewHolder.llContent.setOnClickListener(view -> {
-            if (mOnItemClickListener != null) {
-                mOnItemClickListener.onItemClick(myViewHolder.llContent, position);
-            }
-        });
-    }
-
-    @Override
-    public int getItemViewtype(int position) {
-        return 0;
-    }
-
-    @Override
-    public int getItemcount() {
-        return searchBookBeans.size();
     }
 }

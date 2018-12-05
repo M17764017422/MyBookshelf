@@ -16,8 +16,6 @@ import android.view.KeyEvent;
 import android.view.ViewConfiguration;
 import android.view.WindowManager;
 
-import java.lang.reflect.Method;
-
 /**
  * Created by geyifeng on 2017/5/11.
  */
@@ -47,6 +45,28 @@ class BarConfig {
         mNavigationBarHeight = getNavigationBarHeight(activity);
         mNavigationBarWidth = getNavigationBarWidth(activity);
         mHasNavigationBar = (mNavigationBarHeight > 0) & checkDeviceHasNavigationBar(activity);
+    }
+
+    @TargetApi(14)
+    private static boolean hasNavBar(Activity activity) {
+        WindowManager windowManager = activity.getWindowManager();
+        Display d = windowManager.getDefaultDisplay();
+
+        DisplayMetrics realDisplayMetrics = new DisplayMetrics();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+            d.getRealMetrics(realDisplayMetrics);
+        }
+
+        int realHeight = realDisplayMetrics.heightPixels;
+        int realWidth = realDisplayMetrics.widthPixels;
+
+        DisplayMetrics displayMetrics = new DisplayMetrics();
+        d.getMetrics(displayMetrics);
+
+        int displayHeight = displayMetrics.heightPixels;
+        int displayWidth = displayMetrics.widthPixels;
+
+        return (realWidth - displayWidth) > 0 || (realHeight - displayHeight) > 0;
     }
 
     @TargetApi(14)
@@ -90,28 +110,6 @@ class BarConfig {
         return result;
     }
 
-    @TargetApi(14)
-    private static boolean hasNavBar(Activity activity) {
-        WindowManager windowManager = activity.getWindowManager();
-        Display d = windowManager.getDefaultDisplay();
-
-        DisplayMetrics realDisplayMetrics = new DisplayMetrics();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-            d.getRealMetrics(realDisplayMetrics);
-        }
-
-        int realHeight = realDisplayMetrics.heightPixels;
-        int realWidth = realDisplayMetrics.widthPixels;
-
-        DisplayMetrics displayMetrics = new DisplayMetrics();
-        d.getMetrics(displayMetrics);
-
-        int displayHeight = displayMetrics.heightPixels;
-        int displayWidth = displayMetrics.widthPixels;
-
-        return (realWidth - displayWidth) > 0 || (realHeight - displayHeight) > 0;
-    }
-
     private int getInternalDimensionSize(Resources res, String key) {
         int result = 0;
         try {
@@ -132,7 +130,7 @@ class BarConfig {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
             activity.getWindowManager().getDefaultDisplay().getRealMetrics(metrics);
         } else {
-            // TODO this is not correct, but we don't really care pre-kitkat
+            // this is not correct, but we don't really care pre-kitkat
             activity.getWindowManager().getDefaultDisplay().getMetrics(metrics);
         }
         float widthDp = metrics.widthPixels / metrics.density;
@@ -205,14 +203,14 @@ class BarConfig {
             Point realSize = new Point();
             display.getSize(size);
             display.getRealSize(realSize);
-            boolean  result  = realSize.y!=size.y;
-            return realSize.y!=size.y;
-        }else {
+            boolean result = realSize.y != size.y;
+            return realSize.y != size.y;
+        } else {
             boolean menu = ViewConfiguration.get(activity).hasPermanentMenuKey();
             boolean back = KeyCharacterMap.deviceHasKey(KeyEvent.KEYCODE_BACK);
-            if(menu || back) {
+            if (menu || back) {
                 return false;
-            }else {
+            } else {
                 return true;
             }
         }

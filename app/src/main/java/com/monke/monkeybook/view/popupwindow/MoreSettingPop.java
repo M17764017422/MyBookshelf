@@ -2,135 +2,178 @@
 package com.monke.monkeybook.view.popupwindow;
 
 import android.annotation.SuppressLint;
-import android.content.Intent;
+import android.content.Context;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AlertDialog;
+import android.util.AttributeSet;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
-import android.widget.PopupWindow;
+import android.widget.Switch;
 import android.widget.TextView;
 
-import com.kyleduo.switchbutton.SwitchButton;
 import com.monke.monkeybook.R;
 import com.monke.monkeybook.help.ReadBookControl;
-import com.monke.monkeybook.utils.barUtil.ImmersionBar;
-import com.monke.monkeybook.view.activity.ReadBookActivity;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
 
-import static com.monke.monkeybook.view.fragment.SettingsFragment.ImmersionAction;
 
-public class MoreSettingPop extends PopupWindow {
+public class MoreSettingPop extends FrameLayout {
 
     @BindView(R.id.sb_click_all_next)
-    SwitchButton sbClickAllNext;
-    @BindView(R.id.sb_click_anim)
-    SwitchButton sbClickAnim;
-    @BindView(R.id.sb_key)
-    SwitchButton sbKey;
+    Switch sbClickAllNext;
     @BindView(R.id.sb_click)
-    SwitchButton sbClick;
+    Switch sbClick;
     @BindView(R.id.sb_show_title)
-    SwitchButton sbShowTitle;
+    Switch sbShowTitle;
     @BindView(R.id.sb_showTimeBattery)
-    SwitchButton sbShowTimeBattery;
+    Switch sbShowTimeBattery;
     @BindView(R.id.sb_hideStatusBar)
-    SwitchButton sbHideStatusBar;
+    Switch sbHideStatusBar;
     @BindView(R.id.ll_hideStatusBar)
     LinearLayout llHideStatusBar;
     @BindView(R.id.ll_showTimeBattery)
     LinearLayout llShowTimeBattery;
     @BindView(R.id.sb_hideNavigationBar)
-    SwitchButton sbHideNavigationBar;
+    Switch sbHideNavigationBar;
     @BindView(R.id.ll_hideNavigationBar)
     LinearLayout llHideNavigationBar;
     @BindView(R.id.sb_showLine)
-    SwitchButton sbShowLine;
-    @BindView(R.id.sbImmersionBar)
-    SwitchButton sbImmersionBar;
-    @BindView(R.id.llImmersionBar)
-    LinearLayout llImmersionBar;
+    Switch sbShowLine;
     @BindView(R.id.llScreenTimeOut)
     LinearLayout llScreenTimeOut;
     @BindView(R.id.tv_screen_time_out)
     TextView tvScreenTimeOut;
+    @BindView(R.id.tvJFConvert)
+    TextView tvJFConvert;
+    @BindView(R.id.llJFConvert)
+    LinearLayout llJFConvert;
+    @BindView(R.id.tv_screen_direction)
+    TextView tvScreenDirection;
+    @BindView(R.id.ll_screen_direction)
+    LinearLayout llScreenDirection;
+    @BindView(R.id.sw_volume_next_page)
+    Switch swVolumeNextPage;
+    @BindView(R.id.sw_read_aloud_key)
+    Switch swReadAloudKey;
+    @BindView(R.id.ll_read_aloud_key)
+    LinearLayout llReadAloudKey;
+    @BindView(R.id.sb_tip_margin_change)
+    Switch sbTipMarginChange;
+    @BindView(R.id.ll_click_all_next)
+    LinearLayout llClickAllNext;
+    @BindView(R.id.reNavbarcolor)
+    TextView reNavbarcolor;
+    @BindView(R.id.reNavbarcolor_val)
+    TextView reNavbarcolorVal;
+    @BindView(R.id.llNavigationBarColor)
+    LinearLayout llNavigationBarColor;
 
-    private ReadBookActivity activity;
+    private Context context;
     private ReadBookControl readBookControl = ReadBookControl.getInstance();
-
-    public interface OnChangeProListener {
-        void keepScreenOnChange(int keepScreenOn);
-
-        void reLoad();
-    }
-
     private OnChangeProListener changeProListener;
 
-    @SuppressLint("InflateParams")
-    public MoreSettingPop(ReadBookActivity readBookActivity, @NonNull OnChangeProListener changeProListener) {
-        super(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        this.activity = readBookActivity;
-        this.changeProListener = changeProListener;
+    public MoreSettingPop(Context context) {
+        super(context);
+        this.context = context;
+        init(context);
+    }
 
-        View view = LayoutInflater.from(activity).inflate(R.layout.view_pop_more_setting, null);
-        ImmersionBar.navigationBarPadding(activity, view);
-        this.setContentView(view);
+    public MoreSettingPop(Context context, AttributeSet attrs) {
+        super(context, attrs);
+        this.context = context;
+        init(context);
+    }
+
+    public MoreSettingPop(Context context, AttributeSet attrs, int defStyleAttr) {
+        super(context, attrs, defStyleAttr);
+        this.context = context;
+        init(context);
+    }
+
+    private void init(Context context) {
+        @SuppressLint("InflateParams")
+        View view = LayoutInflater.from(context).inflate(R.layout.pop_more_setting, null);
+        addView(view);
         ButterKnife.bind(this, view);
+        view.setOnClickListener(null);
+    }
+
+    public void setListener(@NonNull OnChangeProListener changeProListener) {
+        this.changeProListener = changeProListener;
         initData();
         bindEvent();
-
-        setBackgroundDrawable(activity.getResources().getDrawable(R.drawable.shape_pop_checkaddshelf_bg));
-        setFocusable(true);
-        setTouchable(true);
-        setClippingEnabled(false);
-        setAnimationStyle(R.style.anim_pop_windowlight);
     }
 
     private void bindEvent() {
+        this.setOnClickListener(view -> this.setVisibility(GONE));
         sbHideStatusBar.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            readBookControl.setHideStatusBar(isChecked);
-            initData();
-            changeProListener.reLoad();
+            if (buttonView.isPressed()) {
+                readBookControl.setHideStatusBar(isChecked);
+                changeProListener.recreate();
+                upView();
+            }
         });
         sbHideNavigationBar.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            readBookControl.setHideNavigationBar(isChecked);
-            initData();
-            changeProListener.reLoad();
+            if (buttonView.isPressed()) {
+                readBookControl.setHideNavigationBar(isChecked);
+                initData();
+                changeProListener.recreate();
+            }
         });
-        sbKey.setOnCheckedChangeListener((buttonView, isChecked) -> readBookControl.setCanKeyTurn(isChecked));
-        sbClick.setOnCheckedChangeListener((buttonView, isChecked) -> readBookControl.setCanClickTurn(isChecked));
-        sbClickAllNext.setOnCheckedChangeListener((buttonView, isChecked) -> readBookControl.setClickAllNext(isChecked));
-        sbClickAnim.setOnCheckedChangeListener(((compoundButton, b) -> readBookControl.setClickAnim(b)));
+        swVolumeNextPage.setOnCheckedChangeListener((compoundButton, b) -> {
+            if (compoundButton.isPressed()) {
+                readBookControl.setCanKeyTurn(b);
+                upView();
+            }
+        });
+        swReadAloudKey.setOnCheckedChangeListener((compoundButton, b) -> {
+            if (compoundButton.isPressed()) {
+                readBookControl.setAloudCanKeyTurn(b);
+            }
+        });
+        sbClick.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (buttonView.isPressed()) {
+                readBookControl.setCanClickTurn(isChecked);
+                upView();
+            }
+        });
+        sbClickAllNext.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (buttonView.isPressed()) {
+                readBookControl.setClickAllNext(isChecked);
+            }
+        });
+
         sbShowTitle.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            readBookControl.setShowTitle(isChecked);
-            readBookControl.setLineChange(System.currentTimeMillis());
-            changeProListener.reLoad();
+            if (buttonView.isPressed()) {
+                readBookControl.setShowTitle(isChecked);
+                changeProListener.refreshPage();
+            }
         });
         sbShowTimeBattery.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            readBookControl.setShowTimeBattery(isChecked);
-            readBookControl.setLineChange(System.currentTimeMillis());
-            changeProListener.reLoad();
+            if (buttonView.isPressed()) {
+                readBookControl.setShowTimeBattery(isChecked);
+                changeProListener.refreshPage();
+            }
         });
         sbShowLine.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            readBookControl.setShowLine(isChecked);
-            readBookControl.setLineChange(System.currentTimeMillis());
-            changeProListener.reLoad();
+            if (buttonView.isPressed()) {
+                readBookControl.setShowLine(isChecked);
+                changeProListener.refreshPage();
+            }
         });
-        sbImmersionBar.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            readBookControl.setImmersionStatusBar(isChecked);
-            readBookControl.setLineChange(System.currentTimeMillis());
-            Intent intent = new Intent(ImmersionAction);
-            intent.putExtra("data", "Immersion_Change");
-            activity.sendBroadcast(intent);
-            changeProListener.reLoad();
+        sbTipMarginChange.setOnCheckedChangeListener((compoundButton, b) -> {
+            if (compoundButton.isPressed()) {
+                readBookControl.setTipMarginChange(b);
+                changeProListener.refreshPage();
+            }
         });
         llScreenTimeOut.setOnClickListener(view -> {
-            AlertDialog dialog = new AlertDialog.Builder(activity)
-                    .setTitle(activity.getString(R.string.keep_light))
-                    .setSingleChoiceItems(activity.getResources().getStringArray(R.array.screen_time_out), readBookControl.getScreenTimeOut(), (dialogInterface, i) -> {
+            AlertDialog dialog = new AlertDialog.Builder(context)
+                    .setTitle(context.getString(R.string.keep_light))
+                    .setSingleChoiceItems(context.getResources().getStringArray(R.array.screen_time_out), readBookControl.getScreenTimeOut(), (dialogInterface, i) -> {
                         readBookControl.setScreenTimeOut(i);
                         upScreenTimeOut(i);
                         changeProListener.keepScreenOnChange(i);
@@ -139,29 +182,112 @@ public class MoreSettingPop extends PopupWindow {
                     .create();
             dialog.show();
         });
+        llJFConvert.setOnClickListener(view -> {
+            AlertDialog dialog = new AlertDialog.Builder(context)
+                    .setTitle(context.getString(R.string.jf_convert))
+                    .setSingleChoiceItems(context.getResources().getStringArray(R.array.convert_s), readBookControl.getTextConvert(), (dialogInterface, i) -> {
+                        readBookControl.setTextConvert(i);
+                        upFConvert(i);
+                        dialogInterface.dismiss();
+                        changeProListener.refreshPage();
+                    })
+                    .create();
+            dialog.show();
+        });
+        llScreenDirection.setOnClickListener(view -> {
+            AlertDialog dialog = new AlertDialog.Builder(context)
+                    .setTitle(context.getString(R.string.screen_direction))
+                    .setSingleChoiceItems(context.getResources().getStringArray(R.array.screen_direction_list_title), readBookControl.getScreenDirection(), (dialogInterface, i) -> {
+                        readBookControl.setScreenDirection(i);
+                        upScreenDirection(i);
+                        dialogInterface.dismiss();
+                        changeProListener.recreate();
+                    })
+                    .create();
+            dialog.show();
+        });
+        llNavigationBarColor.setOnClickListener(view -> {
+            AlertDialog dialog = new AlertDialog.Builder(context)
+                    .setTitle(context.getString(R.string.re_navigation_bar_color))
+                    .setSingleChoiceItems(context.getResources().getStringArray(R.array.NavbarColors), readBookControl.getNavbarColor(), (dialogInterface, i) -> {
+                        readBookControl.setNavbarColor(i);
+                        upNavbarColor(i);
+                        dialogInterface.dismiss();
+                        changeProListener.recreate();
+                    })
+                    .create();
+            dialog.show();
+        });
     }
 
     private void initData() {
+        upScreenDirection(readBookControl.getScreenDirection());
         upScreenTimeOut(readBookControl.getScreenTimeOut());
-        sbHideStatusBar.setCheckedImmediatelyNoEvent(readBookControl.getHideStatusBar());
-        sbHideNavigationBar.setCheckedImmediatelyNoEvent(readBookControl.getHideNavigationBar());
-        sbKey.setCheckedImmediatelyNoEvent(readBookControl.getCanKeyTurn());
-        sbClick.setCheckedImmediatelyNoEvent(readBookControl.getCanClickTurn());
-        sbClickAllNext.setCheckedImmediatelyNoEvent(readBookControl.getClickAllNext());
-        sbClickAnim.setCheckedImmediatelyNoEvent(readBookControl.getClickAnim());
-        sbShowTitle.setCheckedImmediatelyNoEvent(readBookControl.getShowTitle());
-        sbShowTimeBattery.setCheckedImmediatelyNoEvent(readBookControl.getShowTimeBattery());
-        sbShowLine.setCheckedImmediatelyNoEvent(readBookControl.getShowLine());
-        sbImmersionBar.setCheckedImmediatelyNoEvent(readBookControl.getImmersionStatusBar());
+        upFConvert(readBookControl.getTextConvert());
+        upNavbarColor(readBookControl.getNavbarColor());
+        swVolumeNextPage.setChecked(readBookControl.getCanKeyTurn());
+        swReadAloudKey.setChecked(readBookControl.getAloudCanKeyTurn());
+        sbHideStatusBar.setChecked(readBookControl.getHideStatusBar());
+        sbHideNavigationBar.setChecked(readBookControl.getHideNavigationBar());
+        sbClick.setChecked(readBookControl.getCanClickTurn());
+        sbClickAllNext.setChecked(readBookControl.getClickAllNext());
+        sbShowTitle.setChecked(readBookControl.getShowTitle());
+        sbShowTimeBattery.setChecked(readBookControl.getShowTimeBattery());
+        sbShowLine.setChecked(readBookControl.getShowLine());
+        sbTipMarginChange.setChecked(readBookControl.getTipMarginChange());
+        upView();
+    }
+
+    private void upView() {
         if (readBookControl.getHideStatusBar()) {
             llShowTimeBattery.setVisibility(View.VISIBLE);
         } else {
             llShowTimeBattery.setVisibility(View.GONE);
         }
-
+        if (readBookControl.getCanKeyTurn()) {
+            llReadAloudKey.setVisibility(View.VISIBLE);
+        } else {
+            llReadAloudKey.setVisibility(View.GONE);
+        }
+        if (readBookControl.getCanClickTurn()) {
+            llClickAllNext.setVisibility(View.VISIBLE);
+        } else {
+            llClickAllNext.setVisibility(View.GONE);
+        }
+        if (readBookControl.getHideNavigationBar()) {
+            llNavigationBarColor.setVisibility(View.GONE);
+        } else {
+            llNavigationBarColor.setVisibility(View.VISIBLE);
+        }
     }
 
     private void upScreenTimeOut(int screenTimeOut) {
-        tvScreenTimeOut.setText(activity.getResources().getStringArray(R.array.screen_time_out)[screenTimeOut]);
+        tvScreenTimeOut.setText(context.getResources().getStringArray(R.array.screen_time_out)[screenTimeOut]);
     }
+
+    private void upFConvert(int fConvert) {
+        tvJFConvert.setText(context.getResources().getStringArray(R.array.convert_s)[fConvert]);
+    }
+
+    private void upScreenDirection(int screenDirection) {
+        String[] screenDirectionListTitle = context.getResources().getStringArray(R.array.screen_direction_list_title);
+        if (screenDirection >= screenDirectionListTitle.length) {
+            tvScreenDirection.setText(screenDirectionListTitle[0]);
+        } else {
+            tvScreenDirection.setText(screenDirectionListTitle[screenDirection]);
+        }
+    }
+
+    private void upNavbarColor(int nColor) {
+        reNavbarcolorVal.setText(context.getResources().getStringArray(R.array.NavbarColors)[nColor]);
+    }
+
+    public interface OnChangeProListener {
+        void keepScreenOnChange(int keepScreenOn);
+
+        void recreate();
+
+        void refreshPage();
+    }
+
 }

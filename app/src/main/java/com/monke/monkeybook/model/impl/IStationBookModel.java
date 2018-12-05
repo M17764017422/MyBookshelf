@@ -1,20 +1,23 @@
 //Copyright (c) 2017. 章钦豪. All rights reserved.
 package com.monke.monkeybook.model.impl;
 
+import com.monke.monkeybook.bean.BaseChapterBean;
 import com.monke.monkeybook.bean.BookContentBean;
 import com.monke.monkeybook.bean.BookShelfBean;
+import com.monke.monkeybook.bean.ChapterListBean;
 import com.monke.monkeybook.bean.SearchBookBean;
 
 import java.util.List;
 
 import io.reactivex.Observable;
+import io.reactivex.Scheduler;
 
 public interface IStationBookModel {
 
     /**
      * 发现书籍
      */
-     Observable<List<SearchBookBean>> findBook(String url, int page);
+    Observable<List<SearchBookBean>> findBook(String url, int page);
 
     /**
      * 搜索书籍
@@ -29,12 +32,14 @@ public interface IStationBookModel {
     /**
      * 网络解析图书目录
      */
-    Observable<BookShelfBean> getChapterList(final BookShelfBean bookShelfBean);
+    Observable<List<ChapterListBean>> getChapterList(final BookShelfBean bookShelfBean);
+
 
     /**
-     * 章节缓存
+     * 获取章节
+     * @param scheduler       　执行进程
      */
-    Observable<BookContentBean> getBookContent(final String durChapterUrl, final int durChapterIndex);
+    Observable<BookContentBean> getBookContent(final Scheduler scheduler, final BaseChapterBean chapterBean);
 
 
 }

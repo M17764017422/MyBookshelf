@@ -2,14 +2,13 @@ apply plugin: 'com.android.application'
 apply plugin: 'org.greenrobot.greendao'
 apply plugin: 'io.fabric'
 
-static def increasedVersionCode() {
-    return (int) (System.currentTimeMillis() / 1000 / 60 / 60 - 17141)
+static def releaseTime() {
+    return new Date().format("yy.MMddHH", TimeZone.getTimeZone("GMT+8"))
 }
 
 def name = "MONKOVEL"
-def version = "1.6." + increasedVersionCode()
+def version = "2." + releaseTime()
 def gitCommits = Integer.parseInt('git rev-list --count HEAD'.execute([], project.rootDir).text.trim())
-def gitTag = "git tag " + version
 
 def keystorePSW = ''
 def keystoreAlias = ''
@@ -30,8 +29,8 @@ if (keystoreFilepath) {
 }
 
 android {
-    compileSdkVersion 27
-    buildToolsVersion '27.0.3'
+    compileSdkVersion 28
+    buildToolsVersion '28.0.3'
     signingConfigs {
         myConfig {
             storeFile keyFile
@@ -44,11 +43,12 @@ android {
     defaultConfig {
         applicationId "com.gedoor.monkeybook"
         minSdkVersion 19
-        targetSdkVersion 27
+        targetSdkVersion 28
         versionCode 10000 + gitCommits
         versionName version
         project.ext.set("archivesBaseName", name + "_" + version)
         multiDexEnabled true
+
     }
 
     lintOptions {
@@ -81,30 +81,28 @@ android {
 
 }
 
-ext {
-    support_library_version = '27.1.1'
-}
 dependencies {
     api project(':basemvplib')
-    implementation 'com.android.support.constraint:constraint-layout:1.1.2'
     testImplementation 'junit:junit:4.12'
 
     //fireBase
+    //noinspection GradleDependency
     implementation 'com.google.firebase:firebase-core:16.0.1'
-    implementation('com.crashlytics.sdk.android:crashlytics:2.7.1@aar') {
-        transitive = true
-    }
+    implementation 'com.crashlytics.sdk.android:crashlytics:2.9.6'
 
     //support
-    implementation "com.android.support:appcompat-v7:$support_library_version"
+    implementation 'com.android.support.constraint:constraint-layout:1.1.3'
     implementation "com.android.support:design:$support_library_version"
     implementation "com.android.support:cardview-v7:$support_library_version"
     implementation "com.android.support:support-compat:$support_library_version"
+    implementation "com.android.support:support-media-compat:$support_library_version"
+    implementation "com.android.support:support-v4:$support_library_version"
     implementation 'com.google.code.gson:gson:2.8.2'
+    implementation 'com.google.android:flexbox:1.0.0'
 
     //GreenDao
     implementation 'org.greenrobot:greendao:3.2.2'
-    implementation 'com.github.yuweiguocn:GreenDaoUpgradeHelper:v2.0.2'
+    implementation 'com.github.yuweiguocn:GreenDaoUpgradeHelper:v2.1.0'
 
     //codecMD5
     implementation 'commons-codec:commons-codec:1.11'
@@ -113,17 +111,11 @@ dependencies {
     implementation 'com.zhangmonke:MProgressBar:1.0.1'
 
     //Glide
-    implementation 'com.github.bumptech.glide:glide:4.7.1'
-    annotationProcessor 'com.github.bumptech.glide:compiler:4.7.1'
-    implementation 'jp.wasabeef:glide-transformations:3.2.0'
-    // If you want to use the GPU Filters
-    implementation 'jp.co.cyberagent.android.gpuimage:gpuimage-library:1.4.1'
+    implementation 'com.github.bumptech.glide:glide:4.8.0'
+    annotationProcessor 'com.github.bumptech.glide:compiler:4.8.0'
 
     //AutoFitTextView
     implementation 'me.grantland:autofittextview:0.2.1'
-
-    //删除粒子效果
-    implementation 'tyrantgit:explosionfield:1.0.1'
 
     //View简易动画
     implementation 'com.daimajia.easing:library:2.1@aar'
@@ -131,12 +123,6 @@ dependencies {
 
     //CircleImageView
     implementation 'de.hdodenhof:circleimageview:2.2.0'
-
-    //markdownView
-    implementation 'com.zzhoujay.richtext:richtext:3.0.7'
-
-    //SwitchButton
-    implementation 'com.kyleduo.switchbutton:library:2.0.0'
 
     //bind view
     implementation 'com.jakewharton:butterknife:8.8.1'
@@ -146,10 +132,7 @@ dependencies {
     implementation 'com.victor:lib:1.0.4'
 
     //简易权限获取
-    implementation 'pub.devrel:easypermissions:1.2.0'
-
-    //圆形按钮
-    implementation 'com.github.markushi:circlebutton:1.1'
+    implementation 'pub.devrel:easypermissions:2.0.0'
 
     //二维码
     implementation 'com.journeyapps:zxing-android-embedded:3.5.0'
@@ -157,16 +140,30 @@ dependencies {
     //颜色选择
     implementation 'com.github.QuadFlask:colorpicker:0.0.13'
 
+    //文件目录选择
+    implementation('com.github.gedoor.AndroidPicker:FilePicker:1.6.3') {
+        exclude group: 'com.android.support'
+    }
+
     //简繁转换
     implementation 'com.luhuiguo:chinese-utils:1.0'
 
+    //字符串比较
+    implementation 'net.ricecode:string-similarity:1.0.0'
+
+    //MarkDown
+    implementation 'ru.noties:markwon:2.0.0'
+
+    //epub
+    implementation('nl.siegmann.epublib:epublib-core:3.1') {
+        exclude group: 'xmlpull'
+    }
 }
 
 greendao {
-    schemaVersion 25
+    schemaVersion 49
     daoPackage 'com.monke.monkeybook.dao'
     targetGenDir 'src/main/java'
 }
-
 
 apply plugin: 'com.google.gms.google-services'

@@ -8,24 +8,20 @@ import org.greenrobot.greendao.database.Database;
 import org.greenrobot.greendao.identityscope.IdentityScopeType;
 import org.greenrobot.greendao.internal.DaoConfig;
 
-import com.monke.monkeybook.bean.BookContentBean;
 import com.monke.monkeybook.bean.BookInfoBean;
 import com.monke.monkeybook.bean.BookmarkBean;
 import com.monke.monkeybook.bean.BookShelfBean;
 import com.monke.monkeybook.bean.BookSourceBean;
 import com.monke.monkeybook.bean.ChapterListBean;
-import com.monke.monkeybook.bean.DownloadChapterBean;
 import com.monke.monkeybook.bean.ReplaceRuleBean;
 import com.monke.monkeybook.bean.SearchBookBean;
 import com.monke.monkeybook.bean.SearchHistoryBean;
 
-import com.monke.monkeybook.dao.BookContentBeanDao;
 import com.monke.monkeybook.dao.BookInfoBeanDao;
 import com.monke.monkeybook.dao.BookmarkBeanDao;
 import com.monke.monkeybook.dao.BookShelfBeanDao;
 import com.monke.monkeybook.dao.BookSourceBeanDao;
 import com.monke.monkeybook.dao.ChapterListBeanDao;
-import com.monke.monkeybook.dao.DownloadChapterBeanDao;
 import com.monke.monkeybook.dao.ReplaceRuleBeanDao;
 import com.monke.monkeybook.dao.SearchBookBeanDao;
 import com.monke.monkeybook.dao.SearchHistoryBeanDao;
@@ -39,24 +35,20 @@ import com.monke.monkeybook.dao.SearchHistoryBeanDao;
  */
 public class DaoSession extends AbstractDaoSession {
 
-    private final DaoConfig bookContentBeanDaoConfig;
     private final DaoConfig bookInfoBeanDaoConfig;
     private final DaoConfig bookmarkBeanDaoConfig;
     private final DaoConfig bookShelfBeanDaoConfig;
     private final DaoConfig bookSourceBeanDaoConfig;
     private final DaoConfig chapterListBeanDaoConfig;
-    private final DaoConfig downloadChapterBeanDaoConfig;
     private final DaoConfig replaceRuleBeanDaoConfig;
     private final DaoConfig searchBookBeanDaoConfig;
     private final DaoConfig searchHistoryBeanDaoConfig;
 
-    private final BookContentBeanDao bookContentBeanDao;
     private final BookInfoBeanDao bookInfoBeanDao;
     private final BookmarkBeanDao bookmarkBeanDao;
     private final BookShelfBeanDao bookShelfBeanDao;
     private final BookSourceBeanDao bookSourceBeanDao;
     private final ChapterListBeanDao chapterListBeanDao;
-    private final DownloadChapterBeanDao downloadChapterBeanDao;
     private final ReplaceRuleBeanDao replaceRuleBeanDao;
     private final SearchBookBeanDao searchBookBeanDao;
     private final SearchHistoryBeanDao searchHistoryBeanDao;
@@ -64,9 +56,6 @@ public class DaoSession extends AbstractDaoSession {
     public DaoSession(Database db, IdentityScopeType type, Map<Class<? extends AbstractDao<?, ?>>, DaoConfig>
             daoConfigMap) {
         super(db);
-
-        bookContentBeanDaoConfig = daoConfigMap.get(BookContentBeanDao.class).clone();
-        bookContentBeanDaoConfig.initIdentityScope(type);
 
         bookInfoBeanDaoConfig = daoConfigMap.get(BookInfoBeanDao.class).clone();
         bookInfoBeanDaoConfig.initIdentityScope(type);
@@ -83,9 +72,6 @@ public class DaoSession extends AbstractDaoSession {
         chapterListBeanDaoConfig = daoConfigMap.get(ChapterListBeanDao.class).clone();
         chapterListBeanDaoConfig.initIdentityScope(type);
 
-        downloadChapterBeanDaoConfig = daoConfigMap.get(DownloadChapterBeanDao.class).clone();
-        downloadChapterBeanDaoConfig.initIdentityScope(type);
-
         replaceRuleBeanDaoConfig = daoConfigMap.get(ReplaceRuleBeanDao.class).clone();
         replaceRuleBeanDaoConfig.initIdentityScope(type);
 
@@ -95,44 +81,34 @@ public class DaoSession extends AbstractDaoSession {
         searchHistoryBeanDaoConfig = daoConfigMap.get(SearchHistoryBeanDao.class).clone();
         searchHistoryBeanDaoConfig.initIdentityScope(type);
 
-        bookContentBeanDao = new BookContentBeanDao(bookContentBeanDaoConfig, this);
         bookInfoBeanDao = new BookInfoBeanDao(bookInfoBeanDaoConfig, this);
         bookmarkBeanDao = new BookmarkBeanDao(bookmarkBeanDaoConfig, this);
         bookShelfBeanDao = new BookShelfBeanDao(bookShelfBeanDaoConfig, this);
         bookSourceBeanDao = new BookSourceBeanDao(bookSourceBeanDaoConfig, this);
         chapterListBeanDao = new ChapterListBeanDao(chapterListBeanDaoConfig, this);
-        downloadChapterBeanDao = new DownloadChapterBeanDao(downloadChapterBeanDaoConfig, this);
         replaceRuleBeanDao = new ReplaceRuleBeanDao(replaceRuleBeanDaoConfig, this);
         searchBookBeanDao = new SearchBookBeanDao(searchBookBeanDaoConfig, this);
         searchHistoryBeanDao = new SearchHistoryBeanDao(searchHistoryBeanDaoConfig, this);
 
-        registerDao(BookContentBean.class, bookContentBeanDao);
         registerDao(BookInfoBean.class, bookInfoBeanDao);
         registerDao(BookmarkBean.class, bookmarkBeanDao);
         registerDao(BookShelfBean.class, bookShelfBeanDao);
         registerDao(BookSourceBean.class, bookSourceBeanDao);
         registerDao(ChapterListBean.class, chapterListBeanDao);
-        registerDao(DownloadChapterBean.class, downloadChapterBeanDao);
         registerDao(ReplaceRuleBean.class, replaceRuleBeanDao);
         registerDao(SearchBookBean.class, searchBookBeanDao);
         registerDao(SearchHistoryBean.class, searchHistoryBeanDao);
     }
     
     public void clear() {
-        bookContentBeanDaoConfig.clearIdentityScope();
         bookInfoBeanDaoConfig.clearIdentityScope();
         bookmarkBeanDaoConfig.clearIdentityScope();
         bookShelfBeanDaoConfig.clearIdentityScope();
         bookSourceBeanDaoConfig.clearIdentityScope();
         chapterListBeanDaoConfig.clearIdentityScope();
-        downloadChapterBeanDaoConfig.clearIdentityScope();
         replaceRuleBeanDaoConfig.clearIdentityScope();
         searchBookBeanDaoConfig.clearIdentityScope();
         searchHistoryBeanDaoConfig.clearIdentityScope();
-    }
-
-    public BookContentBeanDao getBookContentBeanDao() {
-        return bookContentBeanDao;
     }
 
     public BookInfoBeanDao getBookInfoBeanDao() {
@@ -153,10 +129,6 @@ public class DaoSession extends AbstractDaoSession {
 
     public ChapterListBeanDao getChapterListBeanDao() {
         return chapterListBeanDao;
-    }
-
-    public DownloadChapterBeanDao getDownloadChapterBeanDao() {
-        return downloadChapterBeanDao;
     }
 
     public ReplaceRuleBeanDao getReplaceRuleBeanDao() {

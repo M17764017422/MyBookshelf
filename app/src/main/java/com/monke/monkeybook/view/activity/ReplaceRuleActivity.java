@@ -1,35 +1,42 @@
 package com.monke.monkeybook.view.activity;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.support.design.widget.Snackbar;
 import android.support.v7.app.ActionBar;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.support.v7.widget.helper.ItemTouchHelper;
+import android.text.TextUtils;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
 import android.widget.LinearLayout;
 
+import com.hwangjr.rxbus.RxBus;
+import com.monke.monkeybook.MApplication;
 import com.monke.monkeybook.R;
 import com.monke.monkeybook.base.MBaseActivity;
 import com.monke.monkeybook.base.observer.SimpleObserver;
 import com.monke.monkeybook.bean.ReplaceRuleBean;
+import com.monke.monkeybook.help.ACache;
 import com.monke.monkeybook.help.MyItemTouchHelpCallback;
-import com.monke.monkeybook.model.ReplaceRuleManage;
-import com.monke.monkeybook.presenter.ReplaceRulePresenterImpl;
-import com.monke.monkeybook.presenter.impl.IReplaceRulePresenter;
+import com.monke.monkeybook.help.RxBusTag;
+import com.monke.monkeybook.model.ReplaceRuleManager;
+import com.monke.monkeybook.presenter.ReplaceRulePresenter;
+import com.monke.monkeybook.presenter.contract.ReplaceRuleContract;
+import com.monke.monkeybook.utils.FileUtil;
 import com.monke.monkeybook.view.adapter.ReplaceRuleAdapter;
-import com.monke.monkeybook.view.impl.IReplaceRuleView;
-import com.monke.monkeybook.widget.modialog.MoProgressHUD;
+import com.monke.monkeybook.widget.modialog.MoDialogHUD;
 
 import java.util.List;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
+import cn.qqtheme.framework.picker.FilePicker;
 import io.reactivex.Observable;
 import io.reactivex.ObservableOnSubscribe;
 import io.reactivex.android.schedulers.AndroidSchedulers;
@@ -37,15 +44,13 @@ import io.reactivex.schedulers.Schedulers;
 import pub.devrel.easypermissions.AfterPermissionGranted;
 import pub.devrel.easypermissions.EasyPermissions;
 
-import static com.monke.monkeybook.view.activity.BookSourceActivity.IMPORT_SOURCE;
-import static com.monke.monkeybook.view.activity.BookSourceActivity.RESULT_IMPORT_PERMS;
-
 /**
  * Created by GKF on 2017/12/16.
  * 书源管理
  */
 
-public class ReplaceRuleActivity extends MBaseActivity<IReplaceRulePresenter> implements IReplaceRuleView {
+public class ReplaceRuleActivity extends MBaseActivity<ReplaceRuleContract.Presenter> implements ReplaceRuleContract.View {
+    private final int IMPORT_SOURCE = 102;
 
     @BindView(R.id.toolbar)
     Toolbar toolbar;
@@ -55,9 +60,18 @@ public class ReplaceRuleActivity extends MBaseActivity<IReplaceRulePresenter> im
     RecyclerView recyclerViewBookSource;
 
     private String[] perms = {Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE};
-    private MoProgressHUD moProgressHUD;
+    private MoDialogHUD moDialogHUD;
     private ReplaceRuleAdapter adapter;
     private boolean selectAll = true;
+
+    public static void startThis(Context context) {
+        context.startActivity(new Intent(context, ReplaceRuleActivity.class));
+    }
+
+    @Override
+    protected ReplaceRuleContract.Presenter initInjector() {
+        return new ReplaceRulePresenter();
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -75,7 +89,7 @@ public class ReplaceRuleActivity extends MBaseActivity<IReplaceRulePresenter> im
         this.setSupportActionBar(toolbar);
         setupActionBar();
         initRecyclerView();
-        moProgressHUD = new MoProgressHUD(this);
+        moDialogHUD = new MoDialogHUD(this);
     }
 
     @Override
@@ -87,7 +101,7 @@ public class ReplaceRuleActivity extends MBaseActivity<IReplaceRulePresenter> im
         recyclerViewBookSource.setLayoutManager(new LinearLayoutManager(this));
         adapter = new ReplaceRuleAdapter(this);
         recyclerViewBookSource.setAdapter(adapter);
-        adapter.resetDataS(ReplaceRuleManage.getAll());
+        adapter.resetDataS(ReplaceRuleManager.getAll());
         MyItemTouchHelpCallback itemTouchHelpCallback = new MyItemTouchHelpCallback();
         itemTouchHelpCallback.setOnItemTouchCallbackListener(adapter.getItemTouchCallbackListener());
         itemTouchHelpCallback.setDragEnable(true);
@@ -97,10 +111,10 @@ public class ReplaceRuleActivity extends MBaseActivity<IReplaceRulePresenter> im
     }
 
     public void editReplaceRule(ReplaceRuleBean replaceRuleBean) {
-        moProgressHUD.showPutReplaceRule(replaceRuleBean, ruleBean -> {
+        moDialogHUD.showPutReplaceRule(replaceRuleBean, ruleBean -> {
             Observable.create((ObservableOnSubscribe<List<ReplaceRuleBean>>) e -> {
-                ReplaceRuleManage.saveData(ruleBean);
-                e.onNext(ReplaceRuleManage.getAll());
+                ReplaceRuleManager.saveData(ruleBean);
+                e.onNext(ReplaceRuleManager.getAll());
                 e.onComplete();
             }).subscribeOn(Schedulers.io())
                     .observeOn(AndroidSchedulers.mainThread())
@@ -134,7 +148,7 @@ public class ReplaceRuleActivity extends MBaseActivity<IReplaceRulePresenter> im
         }
         adapter.notifyDataSetChanged();
         selectAll = !selectAll;
-        ReplaceRuleManage.addDataS(adapter.getDataList());
+        ReplaceRuleManager.addDataS(adapter.getDataList());
     }
 
     public void delData(ReplaceRuleBean replaceRuleBean) {
@@ -143,16 +157,6 @@ public class ReplaceRuleActivity extends MBaseActivity<IReplaceRulePresenter> im
 
     public void saveDataS() {
         mPresenter.saveData(adapter.getDataList());
-    }
-
-    @Override
-    protected void firstRequest() {
-
-    }
-
-    @Override
-    protected IReplaceRulePresenter initInjector() {
-        return new ReplaceRulePresenterImpl();
     }
 
     //设置ToolBar
@@ -186,8 +190,14 @@ public class ReplaceRuleActivity extends MBaseActivity<IReplaceRulePresenter> im
                 selectReplaceRuleFile();
                 break;
             case R.id.action_import_onLine:
-                moProgressHUD.showInputBox("输入替换规则网址", getString(R.string.default_replace_url),
-                        inputText -> mPresenter.importDataS(inputText));
+                String cacheUrl = ACache.get(this).getAsString("replaceUrl");
+                moDialogHUD.showInputBox("输入替换规则网址",
+                        cacheUrl,
+                        new String[]{cacheUrl},
+                        inputText -> {
+                            ACache.get(this).put("replaceUrl", inputText);
+                            mPresenter.importDataS(inputText);
+                        });
                 break;
             case R.id.action_del_all:
                 mPresenter.delData(adapter.getDataList());
@@ -200,18 +210,35 @@ public class ReplaceRuleActivity extends MBaseActivity<IReplaceRulePresenter> im
     }
 
     private void selectReplaceRuleFile() {
-        if (EasyPermissions.hasPermissions(this, perms)) {
-            Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-            intent.addCategory(Intent.CATEGORY_OPENABLE);
-            intent.setType("text/*");//设置类型
-            startActivityForResult(intent, IMPORT_SOURCE);
+        if (EasyPermissions.hasPermissions(this, MApplication.PerList)) {
+            FilePicker filePicker = new FilePicker(this, FilePicker.FILE);
+            filePicker.setBackgroundColor(getResources().getColor(R.color.background));
+            filePicker.setTopBackgroundColor(getResources().getColor(R.color.background));
+            filePicker.setItemHeight(30);
+            filePicker.setAllowExtensions(getResources().getStringArray(R.array.text_suffix));
+            filePicker.setOnFilePickListener(s -> {
+                mPresenter.importDataSLocal(s);
+            });
+            filePicker.show();
+            filePicker.getSubmitButton().setText(R.string.sys_file_picker);
+            filePicker.getSubmitButton().setOnClickListener(view -> {
+                filePicker.dismiss();
+                selectFileSys();
+            });
         } else {
             EasyPermissions.requestPermissions(this, getString(R.string.import_book_source),
-                    RESULT_IMPORT_PERMS, perms);
+                    MApplication.RESULT__PERMS, MApplication.PerList);
         }
     }
 
-    @AfterPermissionGranted(RESULT_IMPORT_PERMS)
+    private void selectFileSys() {
+        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("text/*");//设置类型
+        startActivityForResult(intent, IMPORT_SOURCE);
+    }
+
+    @AfterPermissionGranted(MApplication.RESULT__PERMS)
     private void resultImportPerms() {
         selectReplaceRuleFile();
     }
@@ -219,7 +246,7 @@ public class ReplaceRuleActivity extends MBaseActivity<IReplaceRulePresenter> im
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-        Boolean mo = moProgressHUD.onKeyDown(keyCode, event);
+        Boolean mo = moDialogHUD.onKeyDown(keyCode, event);
         if (mo) {
             return true;
         } else {
@@ -234,24 +261,28 @@ public class ReplaceRuleActivity extends MBaseActivity<IReplaceRulePresenter> im
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (resultCode == RESULT_OK) {
-            switch (requestCode) {
-                case IMPORT_SOURCE:
-                    if (data != null) {
-                        mPresenter.importDataS(data.getData());
-                    }
-                    break;
-            }
+        switch (requestCode) {
+            case IMPORT_SOURCE:
+                if (data != null) {
+                    mPresenter.importDataSLocal(FileUtil.getPath(this, data.getData()));
+                }
+                break;
         }
     }
 
     @Override
     public void refresh() {
-        adapter.resetDataS(ReplaceRuleManage.getAll());
+        adapter.resetDataS(ReplaceRuleManager.getAll());
     }
 
     @Override
-    public View getView() {
-        return llContent;
+    protected void onDestroy() {
+        RxBus.get().post(RxBusTag.UPDATE_READ, false);
+        super.onDestroy();
+    }
+
+    @Override
+    public Snackbar getSnackBar(String msg, int length) {
+        return Snackbar.make(llContent, msg, length);
     }
 }

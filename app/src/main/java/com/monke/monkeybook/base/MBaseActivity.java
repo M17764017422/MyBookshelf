@@ -4,31 +4,35 @@ package com.monke.monkeybook.base;
 import android.annotation.SuppressLint;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
+import android.content.res.Configuration;
+import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
+import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatDelegate;
+import android.util.Log;
 import android.view.Menu;
 import android.view.View;
 
 import com.monke.basemvplib.BaseActivity;
 import com.monke.basemvplib.impl.IPresenter;
+import com.monke.monkeybook.MApplication;
 import com.monke.monkeybook.R;
 import com.monke.monkeybook.utils.barUtil.ImmersionBar;
 
 import java.lang.reflect.Method;
 
 public abstract class MBaseActivity<T extends IPresenter> extends BaseActivity<T> {
-    public SharedPreferences preferences;
+    public final SharedPreferences preferences = MApplication.getInstance().getConfigPreferences();
     protected ImmersionBar mImmersionBar;
+    private Snackbar snackbar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        preferences = PreferenceManager.getDefaultSharedPreferences(this);
-        super.onCreate(savedInstanceState);
         initNightTheme();
+        super.onCreate(savedInstanceState);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             getWindow().getDecorView().setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS);
         }
@@ -37,11 +41,16 @@ public abstract class MBaseActivity<T extends IPresenter> extends BaseActivity<T
     }
 
     @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        // 如果你的app可以横竖屏切换，并且适配4.4或者emui3手机请务必在onConfigurationChanged方法里添加这句话
+        ImmersionBar.with(this).init();
+    }
+
+    @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (mImmersionBar != null) {
-            mImmersionBar.destroy();  //在BaseActivity里销毁}
-        }
+        ImmersionBar.with(this).destroy();
     }
 
     @Override
@@ -79,7 +88,6 @@ public abstract class MBaseActivity<T extends IPresenter> extends BaseActivity<T
         for (int i = 0; i < menu.size(); i++) {
             Drawable drawable = menu.getItem(i).getIcon();
             if (drawable != null) {
-                drawable.mutate();
                 drawable.setColorFilter(getResources().getColor(R.color.menu_color_default), PorterDuff.Mode.SRC_ATOP);
             }
         }
@@ -90,26 +98,44 @@ public abstract class MBaseActivity<T extends IPresenter> extends BaseActivity<T
      * 沉浸状态栏
      */
     protected void initImmersionBar() {
-        if (isImmersionBarEnabled()) {
-            mImmersionBar.transparentStatusBar();
-        } else {
-            mImmersionBar.statusBarColor(R.color.status_bar_bag);
-        }
-        if (isImmersionBarEnabled() && !isNightTheme()) {
-            mImmersionBar.statusBarDarkFont(true, 0.2f);
-        } else {
-            mImmersionBar.statusBarDarkFont(false);
-        }
-        if (ImmersionBar.canNavigationBarDarkFont()) {
-            mImmersionBar.navigationBarColor(R.color.background);
-            if (isNightTheme()) {
-                mImmersionBar.navigationBarDarkFont(false);
+        try {
+            if (isImmersionBarEnabled()) {
+                if (getSupportActionBar() != null && isNightTheme() && findViewById(R.id.action_bar) != null) {
+                    mImmersionBar.statusBarColor(R.color.colorPrimary);
+                } else {
+                    mImmersionBar.transparentStatusBar();
+                }
             } else {
-                mImmersionBar.navigationBarDarkFont(true);
+                if (getSupportActionBar() != null && isNightTheme())
+                    mImmersionBar.statusBarColor(R.color.colorPrimaryDark);
+                else
+                    mImmersionBar.statusBarColor(R.color.status_bar_bag);
             }
+        } catch (Exception e) {
+            Log.e("MonkBook", e.getLocalizedMessage());
         }
-        mImmersionBar.init();
-
+        try {
+            if (isImmersionBarEnabled() && !isNightTheme()) {
+                mImmersionBar.statusBarDarkFont(true, 0.2f);
+            } else {
+                mImmersionBar.statusBarDarkFont(false);
+            }
+            if (ImmersionBar.canNavigationBarDarkFont()) {
+                mImmersionBar.navigationBarColor(R.color.background);
+                if (isNightTheme()) {
+                    mImmersionBar.navigationBarDarkFont(false);
+                } else {
+                    mImmersionBar.navigationBarDarkFont(true);
+                }
+            }
+            if (!preferences.getBoolean("navigationBarColorChange", false)) {
+                mImmersionBar.navigationBarColor(R.color.black);
+                mImmersionBar.navigationBarDarkFont(false);
+            }
+            mImmersionBar.init();
+        } catch (Exception e) {
+            Log.e("MonkBook", e.getLocalizedMessage());
+        }
     }
 
     /**
@@ -133,15 +159,18 @@ public abstract class MBaseActivity<T extends IPresenter> extends BaseActivity<T
         initNightTheme();
     }
 
-    public void setOrientation() {
-        switch (preferences.getString(getString(R.string.pk_screen_direction), "0")) {
-            case "0":
+    public void setOrientation(int screenDirection) {
+        switch (screenDirection) {
+            case 0:
                 setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
                 break;
-            case "1":
+            case 1:
                 setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
                 break;
-            case "2":
+            case 2:
+                setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+                break;
+            case 3:
                 setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR);
                 break;
         }
@@ -155,4 +184,32 @@ public abstract class MBaseActivity<T extends IPresenter> extends BaseActivity<T
         }
     }
 
+
+    public void showSnackBar(String msg) {
+        showSnackBar(getCurrentFocus(), msg);
+    }
+
+    public void showSnackBar(String msg, int length) {
+        showSnackBar(getCurrentFocus(), msg, length);
+    }
+
+    public void showSnackBar(View view, String msg) {
+        showSnackBar(view, msg, Snackbar.LENGTH_SHORT);
+    }
+
+    public void showSnackBar(View view, String msg, int length) {
+        if (snackbar == null) {
+            snackbar = Snackbar.make(view, msg, length);
+        } else {
+            snackbar.setText(msg);
+            snackbar.setDuration(length);
+        }
+        snackbar.show();
+    }
+
+    public void hideSnackBar() {
+        if (snackbar != null) {
+            snackbar.dismiss();
+        }
+    }
 }

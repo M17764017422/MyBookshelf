@@ -1,16 +1,14 @@
 package com.monke.monkeybook.view.activity;
 
-import android.content.ContentResolver;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
-import android.graphics.Matrix;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
-import android.provider.MediaStore;
 import android.support.v7.app.ActionBar;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
@@ -19,25 +17,24 @@ import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.Switch;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.flask.colorpicker.ColorPickerView;
 import com.flask.colorpicker.builder.ColorPickerDialogBuilder;
+import com.hwangjr.rxbus.RxBus;
 import com.monke.basemvplib.impl.IPresenter;
+import com.monke.monkeybook.MApplication;
 import com.monke.monkeybook.R;
 import com.monke.monkeybook.base.MBaseActivity;
-import com.monke.monkeybook.help.ACache;
 import com.monke.monkeybook.help.ReadBookControl;
+import com.monke.monkeybook.help.RxBusTag;
 import com.monke.monkeybook.utils.ColorUtil;
+import com.monke.monkeybook.utils.FileUtil;
 import com.monke.monkeybook.utils.barUtil.ImmersionBar;
-import com.monke.monkeybook.widget.ContentTextView;
-import com.monke.monkeybook.widget.modialog.InputView;
-import com.monke.monkeybook.widget.modialog.MoProgressHUD;
-
-import java.io.IOException;
+import com.monke.monkeybook.widget.modialog.MoDialogHUD;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
+import pub.devrel.easypermissions.EasyPermissions;
 
 public class ReadStyleActivity extends MBaseActivity {
     private final int ResultSelectBg = 103;
@@ -47,7 +44,7 @@ public class ReadStyleActivity extends MBaseActivity {
     @BindView(R.id.toolbar)
     Toolbar toolbar;
     @BindView(R.id.tv_content)
-    ContentTextView tvContent;
+    TextView tvContent;
     @BindView(R.id.tvSelectTextColor)
     TextView tvSelectTextColor;
     @BindView(R.id.tvSelectBgColor)
@@ -60,14 +57,14 @@ public class ReadStyleActivity extends MBaseActivity {
     Switch swDarkStatusIcon;
 
     private ReadBookControl readBookControl = ReadBookControl.getInstance();
-    private MoProgressHUD moProgressHUD;
+    private MoDialogHUD moDialogHUD;
     private int textDrawableIndex;
     private int textColor;
     private int bgColor;
     private Drawable bgDrawable;
     private int bgCustom;
-    private Bitmap bgBitmap;
     private boolean darkStatusIcon;
+    private String bgPath;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -93,7 +90,7 @@ public class ReadStyleActivity extends MBaseActivity {
         this.setSupportActionBar(toolbar);
         setupActionBar();
         setTextKind(readBookControl);
-        moProgressHUD = new MoProgressHUD(this);
+        moDialogHUD = new MoDialogHUD(this);
     }
 
     @Override
@@ -121,6 +118,7 @@ public class ReadStyleActivity extends MBaseActivity {
         bgDrawable = readBookControl.getBgDrawable(textDrawableIndex, getContext());
         bgColor = readBookControl.getBgColor(textDrawableIndex);
         darkStatusIcon = readBookControl.getDarkStatusIcon(textDrawableIndex);
+        bgPath = readBookControl.getBgPath(textDrawableIndex);
         upText();
         upBg();
     }
@@ -142,6 +140,7 @@ public class ReadStyleActivity extends MBaseActivity {
                 .initialColor(textColor)
                 .wheelType(ColorPickerView.WHEEL_TYPE.FLOWER)
                 .density(12)
+                .lightnessSliderOnly()
                 .setOnColorSelectedListener(selectedColor -> {
 
                 })
@@ -155,12 +154,15 @@ public class ReadStyleActivity extends MBaseActivity {
                 .build()
                 .show());
         tvSelectTextColor.setOnLongClickListener((View view) -> {
-            moProgressHUD.showInputBox("输入文字颜色", ColorUtil.intToString(textColor), inputText -> {
+            moDialogHUD.showInputBox("输入文字颜色",
+                    ColorUtil.intToString(textColor),
+                    null,
+                    inputText -> {
                 try {
                     textColor = Color.parseColor(inputText);
                     upText();
                 } catch (Exception e) {
-                    Toast.makeText(this, "颜色值错误", Toast.LENGTH_SHORT).show();
+                    toast("颜色值错误", ERROR);
                 }
             });
             return true;
@@ -172,6 +174,7 @@ public class ReadStyleActivity extends MBaseActivity {
                 .initialColor(bgColor)
                 .wheelType(ColorPickerView.WHEEL_TYPE.FLOWER)
                 .density(12)
+                .lightnessSliderOnly()
                 .setOnColorSelectedListener(selectedColor -> {
 
                 })
@@ -187,24 +190,31 @@ public class ReadStyleActivity extends MBaseActivity {
                 .build()
                 .show());
         tvSelectBgColor.setOnLongClickListener((View view) -> {
-            moProgressHUD.showInputBox("输入背景颜色", ColorUtil.intToString(bgColor), inputText -> {
+            moDialogHUD.showInputBox("输入背景颜色",
+                    ColorUtil.intToString(bgColor),
+                    null,
+                    inputText -> {
                 try {
                     bgColor = Color.parseColor(inputText);
                     bgDrawable = new ColorDrawable(bgColor);
                     bgCustom = 1;
                     upBg();
                 } catch (Exception e) {
-                    Toast.makeText(this, "颜色值错误", Toast.LENGTH_SHORT).show();
+                    toast("颜色值错误", ERROR);
                 }
             });
             return true;
         });
         //选择背景图片
         tvSelectBgImage.setOnClickListener(view -> {
-            Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-            intent.addCategory(Intent.CATEGORY_OPENABLE);
-            intent.setType("image/*");
-            startActivityForResult(intent, ResultSelectBg);
+            if (EasyPermissions.hasPermissions(this, MApplication.PerList)) {
+                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                intent.setType("image/*");
+                startActivityForResult(intent, ResultSelectBg);
+            } else {
+                EasyPermissions.requestPermissions(this, "获取背景图片需存储权限", MApplication.RESULT__PERMS, MApplication.PerList);
+            }
         });
         //恢复默认
         tvDefault.setOnClickListener(view -> {
@@ -255,18 +265,16 @@ public class ReadStyleActivity extends MBaseActivity {
         readBookControl.setBgCustom(textDrawableIndex, bgCustom);
         readBookControl.setBgColor(textDrawableIndex, bgColor);
         readBookControl.setDarkStatusIcon(textDrawableIndex, darkStatusIcon);
-        if (bgCustom == 2 && bgBitmap != null) {
-            ACache aCache = ACache.get(this);
-            aCache.put("customBg" + textDrawableIndex, bgBitmap);
+        if (bgCustom == 2) {
+            readBookControl.setBgPath(textDrawableIndex, bgPath);
         }
-        setResult(RESULT_OK);
+        readBookControl.initTextDrawableIndex();
+        RxBus.get().post(RxBusTag.UPDATE_READ, false);
         finish();
     }
 
     private void setTextKind(ReadBookControl readBookControl) {
-
         tvContent.setTextSize(readBookControl.getTextSize());
-        tvContent.setLineSpacing(readBookControl.getTextExtra(), readBookControl.getLineMultiplier());
     }
 
     private void upText() {
@@ -281,29 +289,15 @@ public class ReadStyleActivity extends MBaseActivity {
      * 自定义背景
      */
     public void setCustomBg(Uri uri) {
-        ContentResolver cr = getContentResolver();
         try {
-            Bitmap bitmap = MediaStore.Images.Media.getBitmap(cr, uri);
-            bitmap = getSmallerBitmap(bitmap);
-            ACache aCache = ACache.get(this);
-            aCache.put("customBg", bitmap);
+            bgPath = FileUtil.getPath(this, uri);
+            Bitmap bitmap = BitmapFactory.decodeFile(bgPath);
             bgCustom = 2;
-            bgBitmap = bitmap;
             bgDrawable = new BitmapDrawable(getResources(), bitmap);
             upBg();
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
-            Toast.makeText(this, e.getMessage(), Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    private Bitmap getSmallerBitmap(Bitmap bitmap) {
-        int size = bitmap.getWidth() * bitmap.getHeight() / 360000;
-        if (size <= 1) return bitmap; // 如果小于
-        else {
-            Matrix matrix = new Matrix();
-            matrix.postScale((float) (1 / Math.sqrt(size)), (float) (1 / Math.sqrt(size)));
-            return Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
+            toast(e.getMessage(), ERROR);
         }
     }
 

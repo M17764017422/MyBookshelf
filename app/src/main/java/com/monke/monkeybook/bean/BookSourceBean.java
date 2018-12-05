@@ -2,13 +2,16 @@ package com.monke.monkeybook.bean;
 
 import android.os.Parcel;
 import android.os.Parcelable;
+import android.text.TextUtils;
 
 import org.greenrobot.greendao.annotation.Entity;
 import org.greenrobot.greendao.annotation.Generated;
 import org.greenrobot.greendao.annotation.Id;
+import org.greenrobot.greendao.annotation.NotNull;
 import org.greenrobot.greendao.annotation.OrderBy;
 import org.greenrobot.greendao.annotation.Transient;
 
+import java.util.ArrayList;
 import java.util.Objects;
 
 import static android.text.TextUtils.isEmpty;
@@ -23,8 +26,13 @@ public class BookSourceBean implements Parcelable, Cloneable {
     private String bookSourceUrl;
     private String bookSourceName;
     private String bookSourceGroup;
+    private String checkUrl;
+    private Long lastUpdateTime;
     @OrderBy
     private int serialNumber;
+    @OrderBy
+    @NotNull
+    private int weight = 0;
     private boolean enable;
     private String ruleFindUrl;
     private String ruleSearchUrl;
@@ -38,13 +46,22 @@ public class BookSourceBean implements Parcelable, Cloneable {
     private String ruleBookName;
     private String ruleBookAuthor;
     private String ruleChapterUrl;
+    private String ruleChapterUrlNext;
     private String ruleCoverUrl;
     private String ruleIntroduce;
     private String ruleChapterList;
     private String ruleChapterName;
     private String ruleContentUrl;
+    private String ruleContentUrlNext;
     private String ruleBookContent;
     private String httpUserAgent;
+    private String ruleBookKind;
+    private String ruleBookLastChapter;
+    private String ruleBookUrlPattern;
+
+    @Transient
+    private transient ArrayList<String> groupList;
+
 
     @Transient
     public static final Creator<BookSourceBean> CREATOR = new Creator<BookSourceBean>() {
@@ -63,9 +80,11 @@ public class BookSourceBean implements Parcelable, Cloneable {
         bookSourceUrl = in.readString();
         bookSourceName = in.readString();
         bookSourceGroup = in.readString();
+        checkUrl = in.readString();
         serialNumber = in.readInt();
+        weight = in.readInt();
         enable = in.readByte() != 0;
-
+        lastUpdateTime = in.readLong();
         ruleFindUrl = in.readString();
         ruleSearchUrl = in.readString();
         ruleSearchList = in.readString();
@@ -78,25 +97,34 @@ public class BookSourceBean implements Parcelable, Cloneable {
         ruleBookName = in.readString();
         ruleBookAuthor = in.readString();
         ruleChapterUrl = in.readString();
+        ruleChapterUrlNext = in.readString();
         ruleCoverUrl = in.readString();
         ruleIntroduce = in.readString();
         ruleChapterList = in.readString();
         ruleChapterName = in.readString();
         ruleContentUrl = in.readString();
+        ruleChapterUrlNext = in.readString();
         ruleBookContent = in.readString();
         httpUserAgent = in.readString();
+        ruleBookKind = in.readString();
+        ruleBookLastChapter = in.readString();
+        ruleBookUrlPattern = in.readString();
     }
 
-    @Generated(hash = 1298007385)
-    public BookSourceBean(String bookSourceUrl, String bookSourceName, String bookSourceGroup, int serialNumber, boolean enable,
-            String ruleFindUrl, String ruleSearchUrl, String ruleSearchList, String ruleSearchName, String ruleSearchAuthor,
+    @Generated(hash = 95806387)
+    public BookSourceBean(String bookSourceUrl, String bookSourceName, String bookSourceGroup, String checkUrl, Long lastUpdateTime, int serialNumber,
+            int weight, boolean enable, String ruleFindUrl, String ruleSearchUrl, String ruleSearchList, String ruleSearchName, String ruleSearchAuthor,
             String ruleSearchKind, String ruleSearchLastChapter, String ruleSearchCoverUrl, String ruleSearchNoteUrl, String ruleBookName,
-            String ruleBookAuthor, String ruleChapterUrl, String ruleCoverUrl, String ruleIntroduce, String ruleChapterList,
-            String ruleChapterName, String ruleContentUrl, String ruleBookContent, String httpUserAgent) {
+            String ruleBookAuthor, String ruleChapterUrl, String ruleChapterUrlNext, String ruleCoverUrl, String ruleIntroduce, String ruleChapterList,
+            String ruleChapterName, String ruleContentUrl, String ruleContentUrlNext, String ruleBookContent, String httpUserAgent, String ruleBookKind,
+            String ruleBookLastChapter, String ruleBookUrlPattern) {
         this.bookSourceUrl = bookSourceUrl;
         this.bookSourceName = bookSourceName;
         this.bookSourceGroup = bookSourceGroup;
+        this.checkUrl = checkUrl;
+        this.lastUpdateTime = lastUpdateTime;
         this.serialNumber = serialNumber;
+        this.weight = weight;
         this.enable = enable;
         this.ruleFindUrl = ruleFindUrl;
         this.ruleSearchUrl = ruleSearchUrl;
@@ -110,16 +138,106 @@ public class BookSourceBean implements Parcelable, Cloneable {
         this.ruleBookName = ruleBookName;
         this.ruleBookAuthor = ruleBookAuthor;
         this.ruleChapterUrl = ruleChapterUrl;
+        this.ruleChapterUrlNext = ruleChapterUrlNext;
         this.ruleCoverUrl = ruleCoverUrl;
         this.ruleIntroduce = ruleIntroduce;
         this.ruleChapterList = ruleChapterList;
         this.ruleChapterName = ruleChapterName;
         this.ruleContentUrl = ruleContentUrl;
+        this.ruleContentUrlNext = ruleContentUrlNext;
         this.ruleBookContent = ruleBookContent;
         this.httpUserAgent = httpUserAgent;
+        this.ruleBookKind = ruleBookKind;
+        this.ruleBookLastChapter = ruleBookLastChapter;
+        this.ruleBookUrlPattern = ruleBookUrlPattern;
     }
 
     public BookSourceBean() {
+    }
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel parcel, int i) {
+        parcel.writeString(bookSourceUrl);
+        parcel.writeString(bookSourceName);
+        parcel.writeString(bookSourceGroup);
+        parcel.writeString(checkUrl);
+        parcel.writeInt(serialNumber);
+        parcel.writeInt(weight);
+        parcel.writeByte((byte) (enable ? 1 : 0));
+        parcel.writeLong(lastUpdateTime);
+        parcel.writeString(ruleFindUrl);
+        parcel.writeString(ruleSearchUrl);
+        parcel.writeString(ruleSearchList);
+        parcel.writeString(ruleSearchName);
+        parcel.writeString(ruleSearchAuthor);
+        parcel.writeString(ruleSearchKind);
+        parcel.writeString(ruleSearchLastChapter);
+        parcel.writeString(ruleSearchCoverUrl);
+        parcel.writeString(ruleSearchNoteUrl);
+        parcel.writeString(ruleBookName);
+        parcel.writeString(ruleBookAuthor);
+        parcel.writeString(ruleChapterUrl);
+        parcel.writeString(ruleChapterUrlNext);
+        parcel.writeString(ruleCoverUrl);
+        parcel.writeString(ruleIntroduce);
+        parcel.writeString(ruleChapterList);
+        parcel.writeString(ruleChapterName);
+        parcel.writeString(ruleContentUrl);
+        parcel.writeString(ruleChapterUrlNext);
+        parcel.writeString(ruleBookContent);
+        parcel.writeString(httpUserAgent);
+        parcel.writeString(ruleBookKind);
+        parcel.writeString(ruleBookLastChapter);
+        parcel.writeString(ruleBookUrlPattern);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof BookSourceBean) {
+            BookSourceBean bs = (BookSourceBean) obj;
+            return stringEquals(bookSourceUrl, bs.bookSourceUrl)
+                    && stringEquals(bookSourceName, bs.bookSourceName)
+                    && stringEquals(bookSourceGroup, bs.bookSourceGroup)
+                    && stringEquals(ruleBookName, bs.ruleBookName)
+                    && stringEquals(ruleBookAuthor, bs.ruleBookAuthor)
+                    && stringEquals(ruleChapterUrl, bs.ruleChapterUrl)
+                    && stringEquals(ruleChapterUrlNext, ruleChapterUrlNext)
+                    && stringEquals(ruleCoverUrl, bs.ruleCoverUrl)
+                    && stringEquals(ruleIntroduce, bs.ruleIntroduce)
+                    && stringEquals(ruleChapterList, bs.ruleChapterList)
+                    && stringEquals(ruleChapterName, bs.ruleChapterName)
+                    && stringEquals(ruleContentUrl, bs.ruleContentUrl)
+                    && stringEquals(ruleContentUrlNext, bs.ruleContentUrlNext)
+                    && stringEquals(ruleBookContent, bs.ruleBookContent)
+                    && stringEquals(ruleSearchUrl, bs.ruleSearchUrl)
+                    && stringEquals(ruleSearchList, bs.ruleSearchList)
+                    && stringEquals(ruleSearchName, bs.ruleSearchName)
+                    && stringEquals(ruleSearchAuthor, bs.ruleSearchAuthor)
+                    && stringEquals(ruleSearchKind, bs.ruleSearchKind)
+                    && stringEquals(ruleSearchLastChapter, bs.ruleSearchLastChapter)
+                    && stringEquals(ruleSearchCoverUrl, bs.ruleSearchCoverUrl)
+                    && stringEquals(ruleSearchNoteUrl, bs.ruleSearchNoteUrl)
+                    && stringEquals(httpUserAgent, bs.httpUserAgent)
+                    && stringEquals(ruleBookKind, bs.ruleBookKind)
+                    && stringEquals(ruleBookLastChapter, bs.ruleBookLastChapter)
+                    && stringEquals(ruleBookUrlPattern, bs.ruleBookUrlPattern)
+                    && stringEquals(checkUrl, bs.checkUrl);
+        }
+        return false;
+    }
+
+    private Boolean stringEquals(String str1, String str2) {
+        return Objects.equals(str1, str2) || (isEmpty(str1) && isEmpty(str2));
+    }
+
+    @Override
+    public Object clone() throws CloneNotSupportedException {
+        return super.clone();
     }
 
     public String getBookSourceName() {
@@ -138,46 +256,29 @@ public class BookSourceBean implements Parcelable, Cloneable {
         this.bookSourceUrl = bookSourceUrl;
     }
 
-    @Override
-    public int describeContents() {
-        return 0;
-    }
-
-    @Override
-    public void writeToParcel(Parcel parcel, int i) {
-        parcel.writeString(bookSourceUrl);
-        parcel.writeString(bookSourceName);
-        parcel.writeString(bookSourceGroup);
-        parcel.writeInt(serialNumber);
-        parcel.writeByte((byte) (enable ? 1 : 0));
-
-        parcel.writeString(ruleFindUrl);
-        parcel.writeString(ruleSearchUrl);
-        parcel.writeString(ruleSearchList);
-        parcel.writeString(ruleSearchName);
-        parcel.writeString(ruleSearchAuthor);
-        parcel.writeString(ruleSearchKind);
-        parcel.writeString(ruleSearchLastChapter);
-        parcel.writeString(ruleSearchCoverUrl);
-        parcel.writeString(ruleSearchNoteUrl);
-        parcel.writeString(ruleBookName);
-        parcel.writeString(ruleBookAuthor);
-        parcel.writeString(ruleChapterUrl);
-        parcel.writeString(ruleCoverUrl);
-        parcel.writeString(ruleIntroduce);
-        parcel.writeString(ruleChapterList);
-        parcel.writeString(ruleChapterName);
-        parcel.writeString(ruleContentUrl);
-        parcel.writeString(ruleBookContent);
-        parcel.writeString(httpUserAgent);
-    }
-
     public int getSerialNumber() {
         return this.serialNumber;
     }
 
     public void setSerialNumber(int serialNumber) {
         this.serialNumber = serialNumber;
+    }
+
+    public int getWeight() {
+        return this.weight;
+    }
+
+    public void setWeight(int weight) {
+        this.weight = weight;
+    }
+
+    // 换源时选择的源权重+500
+    public void increaseWeightBySelection() {
+        this.weight += 500;
+    }
+
+    public void increaseWeight(int increase) {
+        this.weight += increase;
     }
 
     public boolean getEnable() {
@@ -332,44 +433,6 @@ public class BookSourceBean implements Parcelable, Cloneable {
         this.httpUserAgent = httpHeaders;
     }
 
-    @Override
-    public boolean equals(Object obj) {
-        if (obj instanceof BookSourceBean) {
-            BookSourceBean bs = (BookSourceBean) obj;
-            return stringEquals(bookSourceUrl, bs.bookSourceUrl)
-                    && stringEquals(bookSourceName, bs.bookSourceName)
-                    && stringEquals(bookSourceGroup, bs.bookSourceGroup)
-                    && stringEquals(ruleBookName, bs.ruleBookName)
-                    && stringEquals(ruleBookAuthor, bs.ruleBookAuthor)
-                    && stringEquals(ruleChapterUrl, bs.ruleChapterUrl)
-                    && stringEquals(ruleCoverUrl, bs.ruleCoverUrl)
-                    && stringEquals(ruleIntroduce, bs.ruleIntroduce)
-                    && stringEquals(ruleChapterList, bs.ruleChapterList)
-                    && stringEquals(ruleChapterName, bs.ruleChapterName)
-                    && stringEquals(ruleContentUrl, bs.ruleContentUrl)
-                    && stringEquals(ruleBookContent, bs.ruleBookContent)
-                    && stringEquals(ruleSearchUrl, bs.ruleSearchUrl)
-                    && stringEquals(ruleSearchList, bs.ruleSearchList)
-                    && stringEquals(ruleSearchName, bs.ruleSearchName)
-                    && stringEquals(ruleSearchAuthor, bs.ruleSearchAuthor)
-                    && stringEquals(ruleSearchKind, bs.ruleSearchKind)
-                    && stringEquals(ruleSearchLastChapter, bs.ruleSearchLastChapter)
-                    && stringEquals(ruleSearchCoverUrl, bs.ruleSearchCoverUrl)
-                    && stringEquals(ruleSearchNoteUrl, bs.ruleSearchNoteUrl)
-                    && stringEquals(httpUserAgent, bs.httpUserAgent);
-        }
-        return false;
-    }
-
-    private Boolean stringEquals(String str1, String str2) {
-        return Objects.equals(str1, str2) || (isEmpty(str1) && isEmpty(str2));
-    }
-
-    @Override
-    public Object clone() throws CloneNotSupportedException {
-        return super.clone();
-    }
-
     public String getRuleFindUrl() {
         return this.ruleFindUrl;
     }
@@ -384,5 +447,109 @@ public class BookSourceBean implements Parcelable, Cloneable {
 
     public void setBookSourceGroup(String bookSourceGroup) {
         this.bookSourceGroup = bookSourceGroup;
+        upGroupList();
+        this.bookSourceGroup = TextUtils.join("; ", groupList);
     }
+
+    public String getCheckUrl() {
+        return this.checkUrl;
+    }
+
+    public void setCheckUrl(String checkUrl) {
+        this.checkUrl = checkUrl;
+    }
+
+    public String getRuleChapterUrlNext() {
+        return this.ruleChapterUrlNext;
+    }
+
+    public void setRuleChapterUrlNext(String ruleChapterUrlNext) {
+        this.ruleChapterUrlNext = ruleChapterUrlNext;
+    }
+
+    public String getRuleContentUrlNext() {
+        return this.ruleContentUrlNext;
+    }
+
+    public void setRuleContentUrlNext(String ruleContentUrlNext) {
+        this.ruleContentUrlNext = ruleContentUrlNext;
+    }
+
+    public String getRuleBookUrlPattern() {
+        return ruleBookUrlPattern;
+    }
+
+    public void setRuleBookUrlPattern(String ruleBookUrlPattern) {
+        this.ruleBookUrlPattern = ruleBookUrlPattern;
+    }
+
+    public String getRuleBookKind() {
+        return ruleBookKind;
+    }
+
+    public void setRuleBookKind(String ruleBookKind) {
+        this.ruleBookKind = ruleBookKind;
+    }
+
+    public String getRuleBookLastChapter() {
+        return ruleBookLastChapter;
+    }
+
+    public void setRuleBookLastChapter(String ruleBookLastChapter) {
+        this.ruleBookLastChapter = ruleBookLastChapter;
+    }
+
+    private void upGroupList() {
+        if (groupList == null)
+            groupList = new ArrayList<>();
+        else
+            groupList.clear();
+        if (!TextUtils.isEmpty(bookSourceGroup)) {
+            for (String group : bookSourceGroup.split("\\s*[,;，；]\\s*")) {
+                group = group.trim();
+                if (TextUtils.isEmpty(group) || groupList.contains(group)) continue;
+                groupList.add(group);
+            }
+        }
+    }
+
+    public void addGroup(String group) {
+        if (groupList == null)
+            upGroupList();
+        if (!groupList.contains(group)) {
+            groupList.add(group);
+            updateModTime();
+            bookSourceGroup = TextUtils.join("; ", groupList);
+        }
+    }
+
+    public void removeGroup(String group) {
+        if (groupList == null)
+            upGroupList();
+        if (groupList.contains(group)) {
+            groupList.remove(group);
+            updateModTime();
+            bookSourceGroup = TextUtils.join("; ", groupList);
+        }
+    }
+
+    public boolean containsGroup(String group) {
+        if (groupList == null) {
+            upGroupList();
+        }
+        return groupList.contains(group);
+    }
+
+    public Long getLastUpdateTime() {
+        return lastUpdateTime;
+    }
+
+    public void setLastUpdateTime(Long lastUpdateTime) {
+        this.lastUpdateTime = lastUpdateTime;
+    }
+
+    public void updateModTime() {
+        this.lastUpdateTime = System.currentTimeMillis();
+    }
+
 }

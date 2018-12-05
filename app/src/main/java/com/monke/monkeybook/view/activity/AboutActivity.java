@@ -4,7 +4,7 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.PorterDuff;
+import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.v7.app.ActionBar;
@@ -14,13 +14,22 @@ import android.view.KeyEvent;
 import android.view.MenuItem;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.EncodeHintType;
+import com.google.zxing.MultiFormatWriter;
+import com.google.zxing.WriterException;
+import com.google.zxing.common.BitMatrix;
+import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
+import com.journeyapps.barcodescanner.BarcodeEncoder;
 import com.monke.basemvplib.impl.IPresenter;
 import com.monke.monkeybook.MApplication;
 import com.monke.monkeybook.R;
 import com.monke.monkeybook.base.MBaseActivity;
-import com.monke.monkeybook.widget.modialog.MoProgressHUD;
+import com.monke.monkeybook.help.UpdateManager;
+import com.monke.monkeybook.widget.modialog.MoDialogHUD;
+
+import java.util.Hashtable;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -59,10 +68,6 @@ public class AboutActivity extends MBaseActivity {
     TextView tvMail;
     @BindView(R.id.vw_mail)
     CardView vwMail;
-    @BindView(R.id.tv_source_rule)
-    TextView tvSourceRule;
-    @BindView(R.id.vw_source_rule)
-    CardView vwSourceRule;
     @BindView(R.id.tv_update)
     TextView tvUpdate;
     @BindView(R.id.vw_update)
@@ -81,9 +86,22 @@ public class AboutActivity extends MBaseActivity {
     TextView tvHomePage;
     @BindView(R.id.vw_home_page)
     CardView vwHomePage;
+    @BindView(R.id.tv_faq)
+    TextView tvFaq;
+    @BindView(R.id.vw_faq)
+    CardView vwFaq;
+    @BindView(R.id.tv_share)
+    TextView tvShare;
+    @BindView(R.id.vw_share)
+    CardView vwShare;
 
-    private MoProgressHUD moProgressHUD;
+    private MoDialogHUD moDialogHUD;
     private String qq = "701903217 788025059";
+
+    public static void startThis(Context context) {
+        Intent intent = new Intent(context, AboutActivity.class);
+        context.startActivity(intent);
+    }
 
     @Override
     protected IPresenter initInjector() {
@@ -102,7 +120,7 @@ public class AboutActivity extends MBaseActivity {
 
     @Override
     protected void initData() {
-        moProgressHUD = new MoProgressHUD(this);
+        moDialogHUD = new MoDialogHUD(this);
     }
 
     @Override
@@ -110,51 +128,35 @@ public class AboutActivity extends MBaseActivity {
         ButterKnife.bind(this);
         this.setSupportActionBar(toolbar);
         setupActionBar();
-        tvVersion.setText(String.format(getString(R.string.version_name), MApplication.getVersionName()));
-        tvQq.setText(String.format(getString(R.string.qq_group), qq));
-
-        setTextViewIconColor(tvDisclaimer);
-        setTextViewIconColor(tvGit);
-        setTextViewIconColor(tvDonate);
-        setTextViewIconColor(tvHomePage);
-        setTextViewIconColor(tvMail);
-        setTextViewIconColor(tvQq);
-        setTextViewIconColor(tvScoring);
-        setTextViewIconColor(tvSourceRule);
-        setTextViewIconColor(tvUpdate);
-        setTextViewIconColor(tvUpdateLog);
-        setTextViewIconColor(tvVersion);
-
-    }
-
-    private void setTextViewIconColor(TextView textView) {
-        textView.getCompoundDrawablesRelative()[0].mutate();
-        textView.getCompoundDrawablesRelative()[0].setColorFilter(getResources().getColor(R.color.tv_text_default), PorterDuff.Mode.SRC_ATOP);
+        tvVersion.setText(getString(R.string.version_name, MApplication.getVersionName()));
+        tvQq.setText(getString(R.string.qq_group, qq));
     }
 
     @Override
     protected void bindEvent() {
-        vwDonate.setOnClickListener(view -> {
-            Intent intent = new Intent(this, DonateActivity.class);
-            startActivity(intent);
-        });
+        vwDonate.setOnClickListener(view -> DonateActivity.startThis(this));
         vwScoring.setOnClickListener(view -> openIntent(Intent.ACTION_VIEW, "market://details?id=" + getPackageName()));
         vwMail.setOnClickListener(view -> openIntent(Intent.ACTION_SENDTO, "mailto:kunfei.ge@gmail.com"));
         vwGit.setOnClickListener(view -> openIntent(Intent.ACTION_VIEW, getString(R.string.this_github_url)));
-        vwSourceRule.setOnClickListener(view -> openIntent(Intent.ACTION_VIEW, getString(R.string.source_rule_url)));
-        vwDisclaimer.setOnClickListener(view -> openIntent(Intent.ACTION_VIEW, getString(R.string.disclaimer_url)));
-        vwUpdate.setOnClickListener(view -> openIntent(Intent.ACTION_VIEW, getString(R.string.latest_release_url)));
+        vwDisclaimer.setOnClickListener(view -> moDialogHUD.showAssetMarkdown("disclaimer.md"));
+        vwUpdate.setOnClickListener(view -> UpdateManager.getInstance(this).checkUpdate(true));
         vwHomePage.setOnClickListener(view -> openIntent(Intent.ACTION_VIEW, getString(R.string.home_page_url)));
         vwQq.setOnClickListener(view -> {
             ClipboardManager clipboard = (ClipboardManager) this.getSystemService(Context.CLIPBOARD_SERVICE);
             ClipData clipData = ClipData.newPlainText(null, qq);
             if (clipboard != null) {
                 clipboard.setPrimaryClip(clipData);
-                Toast.makeText(this, R.string.copy_complete, Toast.LENGTH_SHORT).show();
+                toast(R.string.copy_complete);
             }
         });
-        vwUpdateLog.setOnClickListener(view -> {
-            moProgressHUD.showAssetMarkdown("updateLog.md");
+        vwUpdateLog.setOnClickListener(view -> moDialogHUD.showAssetMarkdown("updateLog.md"));
+        vwFaq.setOnClickListener(view -> moDialogHUD.showAssetMarkdown("faq.md"));
+        vwShare.setOnClickListener(view -> {
+            String url = "https://www.coolapk.com/apk/com.gedoor.monkeybook";
+            Bitmap bitmap = encodeAsBitmap(url);
+            if (bitmap != null) {
+                moDialogHUD.showImageText(bitmap, url);
+            }
         });
     }
 
@@ -170,7 +172,7 @@ public class AboutActivity extends MBaseActivity {
             startActivity(intent);
         } catch (Exception e) {
             e.printStackTrace();
-            Toast.makeText(this, R.string.can_not_open, Toast.LENGTH_SHORT).show();
+            toast(R.string.can_not_open, ERROR);
         }
     }
 
@@ -197,7 +199,26 @@ public class AboutActivity extends MBaseActivity {
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-        Boolean mo = moProgressHUD.onKeyDown(keyCode, event);
+        Boolean mo = moDialogHUD.onKeyDown(keyCode, event);
         return mo || super.onKeyDown(keyCode, event);
+    }
+
+    public Bitmap encodeAsBitmap(String str) {
+        Bitmap bitmap = null;
+        BitMatrix result;
+        MultiFormatWriter multiFormatWriter = new MultiFormatWriter();
+        try {
+            Hashtable<EncodeHintType, Object> hst = new Hashtable();
+            hst.put(EncodeHintType.CHARACTER_SET, "UTF-8");
+            hst.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.H);
+            result = multiFormatWriter.encode(str, BarcodeFormat.QR_CODE, 600, 600, hst);
+            BarcodeEncoder barcodeEncoder = new BarcodeEncoder();
+            bitmap = barcodeEncoder.createBitmap(result);
+        } catch (WriterException e) {
+            e.printStackTrace();
+        } catch (IllegalArgumentException iae) { // ?
+            return null;
+        }
+        return bitmap;
     }
 }
